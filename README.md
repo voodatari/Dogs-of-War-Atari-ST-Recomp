@@ -88,12 +88,6 @@ unassigned, and a key already used by another action is taken from it. *Restore 
 
 **Typing**: on the screens that ask for text (the name in the high-score table) every letter A–Z (including **Z**, which is also the second fire key, and **V**), the digits, Backspace, Delete and the usual punctuation keys are passed to the game.
 
-## Options menu
-Open it with **Esc** or **Start**; the game is paused while it is open. The options are grouped in **tabs** (the bar under the title). Up/down select an option, left/right change its value, **Enter / A** accepts, **Esc / B / Start** closes.
-To change tab press **L1 / R1** on the pad or **Page Up / Page Down** (or **Tab**) on the keyboard, or go up from the first option of a tab to the tab bar and use left/right; down goes back into the tab. The menu reopens on the tab and option you left it in.
-The explanation of the selected option appears at the bottom, together with the result of the last action. For options with several values (aspect ratio, shader source, scaling filter, shader / CRT effect, graphics pack, game speed) it is a general explanation, then a horizontal line, then what the chosen value does (only this second text shrinks its font if it is long). The menu is drawn without any shader.
-Settings are saved in `options.json` when the menu closes.
-
 | Tab | Contents |
 |---|---|
 | **Game** | Back to the mission map · Save slot (1–3, with date) · Save game · Load game · Restart game (back to "1 OR 2 PLAYER GAME?", skipping the intro) · Invulnerability · Infinite money (both always off at start-up) |
@@ -341,12 +335,6 @@ El primer mando es el jugador 1 (se suma al teclado) y el segundo mando es el ju
 sin asignar, y una tecla que ya usa otra acción se le quita. *Restaurar controles por defecto* lo devuelve todo a su valor original.
 
 **Escribir**: en las pantallas que piden texto (el nombre en la tabla de récords) se pasan al juego todas las letras A–Z (incluidas la **Z**, que además es la segunda tecla de disparo, y la **V**), los dígitos, Retroceso, Supr y las teclas de puntuación habituales.
-
-## Menú de opciones
-Se abre con **Esc** o **Start**; el juego queda en pausa mientras está abierto. Las opciones se agrupan en **pestañas** (la barra bajo el título). Arriba/abajo seleccionan una opción, izquierda/derecha cambian su valor, **Intro / A** acepta, **Esc / B / Start** lo cierra.
-Para cambiar de pestaña pulsa **L1 / R1** en el mando o **Re Pág / Av Pág** (o **Tab**) en el teclado, o sube desde la primera opción de una pestaña hasta la barra de pestañas y usa izquierda/derecha; abajo vuelve a entrar en la pestaña. El menú se reabre en la pestaña y la opción en que lo dejaste.
-La explicación de la opción seleccionada aparece abajo, junto con el resultado de la última acción. En las opciones con varios valores (relación de aspecto, origen del shader, filtro de escalado, shader / efecto CRT, pack gráfico, velocidad del juego) es una explicación general, luego una línea horizontal y después lo que hace el valor elegido (este segundo texto reduce su fuente si es largo). El menú se dibuja sin ningún shader.
-Los ajustes se guardan en `options.json` al cerrar el menú.
 
 | Pestaña | Contenido |
 |---|---|
