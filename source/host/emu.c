@@ -4,6 +4,7 @@
  */
 #include "emu.h"
 #include "lang.h"
+#include "port.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -18,11 +19,9 @@ volatile int emu_running = 0;
 #define ATRASO_MAX 6.0
 
 static EmuConfig cfg;
-#ifdef _WIN32
-static HANDLE thread_handle = NULL;
-static HANDLE ev_signal = NULL;
-static CRITICAL_SECTION ev_cs;
-#endif
+static void *thread_handle;
+static PortEvent *ev_signal;
+static PortMutex *ev_mutex;
 typedef struct Ev {
     int type;
     double a, b;
@@ -43,31 +42,31 @@ void emu_set_music_dir(const char *path) {
  * numbers whose meaning depends on it; see emu.h. The queue is protected by a critical section and the emulation
  * thread is woken up. */
 void emu_post(int type, double a, double b) {
-#ifdef _WIN32
-    EnterCriticalSection(&ev_cs);
+    if (!ev_mutex)
+        return;
+    port_mutex_lock(ev_mutex);
     if (evq_count < EVCAP) {
         evq[(evq_head + evq_count) % EVCAP].type = type;
         evq[(evq_head + evq_count) % EVCAP].a = a;
         evq[(evq_head + evq_count) % EVCAP].b = b;
         evq_count++;
     }
-    LeaveCriticalSection(&ev_cs);
-    SetEvent(ev_signal);
-#endif
+    port_mutex_unlock(ev_mutex);
+    port_event_signal(ev_signal);
 }
 /* Takes the oldest queued event; returns 0 if there is none. */
 static int ev_pop(Ev *e) {
     int ok = 0;
-#ifdef _WIN32
-    EnterCriticalSection(&ev_cs);
+    if (!ev_mutex)
+        return 0;
+    port_mutex_lock(ev_mutex);
     if (evq_count) {
         *e = evq[evq_head];
         evq_head = (evq_head + 1) % EVCAP;
         evq_count--;
         ok = 1;
     }
-    LeaveCriticalSection(&ev_cs);
-#endif
+    port_mutex_unlock(ev_mutex);
     return ok;
 }
 
@@ -724,7 +723,7 @@ static void save_slot(int n) {
     char p[700], msg[120];
     snprintf(p, sizeof p, "%s/slot%d.dows", save_dir, n);
 #ifdef _WIN32
-    CreateDirectoryA(save_dir, NULL);
+    port_mkdir(save_dir);
 #endif
     if (state_write_file(st, p)) {
         trf(msg, sizeof msg, tmp ? "msg.saved_map" : "msg.saved_before", n);
@@ -1410,7 +1409,7 @@ static int do_step(void) {
             snprintf(p1, sizeof p1, "%s/crash%d_start.dows", save_dir, ncrash);
             snprintf(p2, sizeof p2, "%s/crash%d_inputs.txt", save_dir, ncrash);
 #ifdef _WIN32
-            CreateDirectoryA(save_dir, NULL);
+            port_mkdir(save_dir);
 #endif
             state_write_file(good[0], p1);
             tos_ilog_write(p2, good_vbl[0]);
@@ -1530,15 +1529,16 @@ static int do_step(void) {
     return gameplay;
 }
 
-#ifdef _WIN32
 /* The emulation thread: keeps the game clock, runs do_step at the pace of the clock (50 VBL/s in a mission, the
  * monitor's rate elsewhere, nothing while paused or ahead of the clock) and handles the events in between. */
-static DWORD WINAPI emu_thread(LPVOID arg) {
+static void *emu_thread(void *arg) {
     (void)arg;
     double tr = 0;
-    /* the audio must not wait for the drawing thread to finish */
+#ifdef _WIN32
     timeBeginPeriod(1);
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+#endif
+    /* the audio must not wait for the drawing thread to finish */
     double t_mode = 0;
     int mode_since = 0;
     stats_report_time = now_s();
@@ -1554,7 +1554,7 @@ static DWORD WINAPI emu_thread(LPVOID arg) {
         int tickmode = menu_clock;
         if ((tickmode && ticks <= 0) || (!tickmode && (double)tos.vbl >= tv + lead)) {
             /* waiting for the clock: if a key press arrives, deliver it to the game NOW */
-            WaitForSingleObject(ev_signal, 2);
+            port_event_wait(ev_signal, 2);
             Ev e;
             int got = 0;
             while (ev_pop(&e)) {
@@ -1634,6 +1634,7 @@ static DWORD WINAPI emu_thread(LPVOID arg) {
         (void)t_mode;
     }
 out:
+#ifdef _WIN32
     if (getenv("DOW_TEST")) {
         FILETIME c_, e_, k_, u_;
         GetThreadTimes(GetCurrentThread(), &c_, &e_, &k_, &u_);
@@ -1643,10 +1644,10 @@ out:
                      1e7,
                  (((uint64_t)u_.dwHighDateTime << 32 | u_.dwLowDateTime)) / 1e7);
     }
-    emu_running = 0;
-    return 0;
-}
 #endif
+    emu_running = 0;
+    return NULL;
+}
 
 /* ---- start and stop ---- */
 /* Starts the emulation: loads the game state (a saved one for tests, else the one the original loader would leave),
@@ -1707,22 +1708,39 @@ int emu_start(const EmuConfig *c) {
     clock_rate = game_hz;
     menu_clock = 0;
     post_rate();
-#ifdef _WIN32
-    InitializeCriticalSection(&ev_cs);
-    ev_signal = CreateEvent(NULL, FALSE, FALSE, NULL);
+    ev_mutex = port_mutex_new();
+    ev_signal = port_event_new();
+    if (!ev_mutex || !ev_signal) {
+        port_mutex_free(ev_mutex);
+        port_event_free(ev_signal);
+        ev_mutex = NULL;
+        ev_signal = NULL;
+        host_log("Could not initialize the emulation event queue");
+        return 0;
+    }
+    evq_head = evq_count = 0;
     emu_running = 1;
-    thread_handle = CreateThread(NULL, 64u << 20, emu_thread, NULL, 0, NULL);
-#endif
+    if (!port_thread_start_stack(emu_thread, NULL, &thread_handle, 64u << 20)) {
+        emu_running = 0;
+        port_event_free(ev_signal);
+        port_mutex_free(ev_mutex);
+        ev_signal = NULL;
+        ev_mutex = NULL;
+        host_log("Could not start the emulation thread");
+        return 0;
+    }
     return 1;
 }
 /* Waits for the emulation thread to finish (up to 3 s). */
 void emu_join(void) {
-#ifdef _WIN32
     if (thread_handle) {
-        WaitForSingleObject(thread_handle, 3000);
+        port_thread_join(thread_handle);
         thread_handle = NULL;
     }
-#endif
+    port_event_free(ev_signal);
+    port_mutex_free(ev_mutex);
+    ev_signal = NULL;
+    ev_mutex = NULL;
 }
 /* What the game is showing now (see screen_kind); read by the window thread. */
 const char *emu_kind(void) {

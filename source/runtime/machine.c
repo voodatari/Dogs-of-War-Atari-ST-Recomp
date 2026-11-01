@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <ucontext.h>
 #endif
 
 static uint8_t g_ram[RAMSZ];
@@ -157,6 +159,11 @@ void sync_regs_in(void) { load_regs(); }
 /* ------------------------------------------------------------------------------------------------ game fiber */
 #ifdef _WIN32
 static LPVOID host_fiber = 0, game_fiber = 0;
+#else
+#define GAME_STACK_SIZE (16u << 20)
+static ucontext_t host_context, game_context;
+static uint8_t *game_stack;
+static int game_context_ready;
 #endif
 static int in_game = 0;                    /* 1 while control is in the game fiber */
 
@@ -165,6 +172,8 @@ void yield_to_host(int rc) {
     g_cpu.rc = rc; store_regs();
 #ifdef _WIN32
     SwitchToFiber(host_fiber);
+#else
+    swapcontext(&game_context, &host_context);
 #endif
     load_regs();                           /* the host may have changed registers or memory */
 }
@@ -198,12 +207,22 @@ static void game_main(void *unused) {
 }
 #ifdef _WIN32
 static VOID CALLBACK game_entry(LPVOID p) { game_main(p); }
+#else
+static void game_entry(void) {
+    game_main(NULL);
+}
 #endif
 
 API void core_reset(void) {                /* forgets the call stack (e.g. when loading a state) */
 #ifdef _WIN32
     if (game_fiber && !in_game) { DeleteFiber(game_fiber); }
     game_fiber = 0;
+#else
+    if (!in_game) {
+        free(game_stack);
+        game_stack = NULL;
+        game_context_ready = 0;
+    }
 #endif
     in_game = 0; resume_pc = 0;
 }
@@ -223,7 +242,28 @@ API int core_run(CPU *c, int32_t budget) {
     in_game = 1; SwitchToFiber(game_fiber); in_game = 0;
     return g_cpu.rc;
 #else
-    return RC_MISS;
+    if (!game_context_ready) {
+        game_stack = (uint8_t *)malloc(GAME_STACK_SIZE);
+        if (!game_stack || getcontext(&game_context) != 0) {
+            free(game_stack);
+            game_stack = NULL;
+            return RC_MISS;
+        }
+        game_context.uc_stack.ss_sp = game_stack;
+        game_context.uc_stack.ss_size = GAME_STACK_SIZE;
+        game_context.uc_stack.ss_flags = 0;
+        game_context.uc_link = &host_context;
+        makecontext(&game_context, game_entry, 0);
+        game_context_ready = 1;
+    }
+    load_regs();
+    in_game = 1;
+    if (swapcontext(&host_context, &game_context) != 0) {
+        in_game = 0;
+        return RC_MISS;
+    }
+    in_game = 0;
+    return g_cpu.rc;
 #endif
 }
 

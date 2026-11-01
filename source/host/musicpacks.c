@@ -4,68 +4,54 @@
  * the empty string. The menu lists the packs found here; the emulation thread is told which folder to read.
  */
 #include "app.h"
+#include "port.h"
 
 #define MAXPACK 32
 
 static char packs[MAXPACK][80]; /* names found by the last scan_packs; "" = the files directly in music/ */
 static int npacks = 0;
 
+static int detect_audio(const char *name, void *context) {
+    int *found = (int *)context;
+    const char *e = strrchr(name, '.');
+    if (e && (!_stricmp(e, ".mp3") || !_stricmp(e, ".ogg") || !_stricmp(e, ".wav") || !_stricmp(e, ".wma") ||
+              !_stricmp(e, ".m4a"))) {
+        *found = 1;
+        return 0;
+    }
+    return 1;
+}
+
 /* Does the folder contain an audio file? */
 static int has_audio_files(const char *dir) {
-#ifdef _WIN32
-    char pat[760];
-    snprintf(pat, sizeof pat, "%s/*", dir);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
-    if (h == INVALID_HANDLE_VALUE)
-        return 0;
     int found = 0;
-    do {
-        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            continue;
-        const char *e = strrchr(fd.cFileName, '.');
-        if (e && (!_stricmp(e, ".mp3") || !_stricmp(e, ".ogg") || !_stricmp(e, ".wav") || !_stricmp(e, ".wma") ||
-                  !_stricmp(e, ".m4a"))) {
-            found = 1;
-            break;
-        }
-    } while (FindNextFileA(h, &fd));
-    FindClose(h);
+    port_list_files(dir, NULL, detect_audio, &found);
     return found;
-#else
-    (void)dir;
-    return 0;
-#endif
 }
 
 static int pack_cmp(const void *a, const void *b) {
     return _stricmp((const char *)a, (const char *)b);
 }
 
+static int add_pack_dir(const char *name, void *context) {
+    (void)context;
+    if (name[0] == '.' || npacks >= MAXPACK)
+        return 1;
+    char d[800];
+    snprintf(d, sizeof d, "%s/%s", music_root, name);
+    if (has_audio_files(d))
+        snprintf(packs[npacks++], 80, "%s", name);
+    return 1;
+}
+
 /* Looks in the music folder: the loose files first (if any), then the subfolders in alphabetical order. */
 void scan_packs(void) {
     npacks = 0;
-#ifdef _WIN32
     if (has_audio_files(music_root))
         packs[npacks++][0] = 0;
-    char pat[760];
-    snprintf(pat, sizeof pat, "%s/*", music_root);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
     int first = npacks;
-    if (h != INVALID_HANDLE_VALUE) {
-        do {
-            if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || fd.cFileName[0] == '.' || npacks >= MAXPACK)
-                continue;
-            char d[800];
-            snprintf(d, sizeof d, "%s/%s", music_root, fd.cFileName);
-            if (has_audio_files(d))
-                snprintf(packs[npacks++], 80, "%s", fd.cFileName);
-        } while (FindNextFileA(h, &fd));
-        FindClose(h);
-    }
+    port_list_dirs(music_root, add_pack_dir, &first);
     qsort(packs[first], (size_t)(npacks - first), 80, pack_cmp);
-#endif
 }
 
 int pack_count(void) {

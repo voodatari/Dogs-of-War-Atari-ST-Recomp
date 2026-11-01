@@ -1,8 +1,8 @@
-# Dogs of War – native C source (`source/`)
+# Dogs of War – native C source for Windows and Linux (`source/`)
 
-This is the whole program of the Windows port of *Dogs of War* (Atari ST, Pera Putnik's HAGA version): the game's own 68000 code translated to **C**
+This is the whole program of the Windows/Linux port of *Dogs of War* (Atari ST, Pera Putnik's HAGA version): the game's own 68000 code translated to **C**
 (one C function per game routine, with the original instruction in a comment, named registers, variables and hardware registers, and `if` / `else` /
-`do … while` structures instead of jumps), plus a native Windows host (window, OpenGL, sound, input, menu, graphics packs). A C compiler is all that is needed to build it.
+`do … while` structures instead of jumps), plus native Windows and Linux hosts. Windows uses OpenGL and native audio/input; Linux uses SDL2.
 
 > The game is abandonware. `generated/` is the translation of the game's program into C, and the executable contains it.
 
@@ -10,24 +10,66 @@ This is the whole program of the Windows port of *Dogs of War* (Atari ST, Pera P
 
 ```
 source/
-  build.bat, build.ps1   build script (needs a C compiler: Zig, MinGW-w64 gcc or clang)
+  build.bat, build.ps1   Windows build (Zig, MinGW-w64 gcc or clang)
+  build-linux.sh         Linux x86-64 build (GCC/Clang, pkg-config, SDL2)
   generated/             the game: game_XXXX.c (one C function per routine), game.h, globals.h, dispatch.c
   runtime/               the "machine" around the game code
     cpu.h                registers, flags, macros (CALL, RTS, SETW, FL_*, COND, HOOK, IDLE_*...)
     machine.c            memory, STE I/O (video, MFP, YM2149, keyboard), interrupts, context switch (fibers)
-  host/                  the Windows program (see below)
+  host/                  shared game host and Windows backend
+  port/                  POSIX/Windows portability layer, SDL2 Linux backends and portable 2-D library (ui2d)
+                         that draws the menus (rasteriser + stb_truetype + embedded Noto Sans)
+  thirdparty/            vendored open-source code and its licences: minimp3, stb_vorbis, stb_truetype, Noto Sans
+                         (see thirdparty/THIRD_PARTY.md)
 ```
 
 ## Build
 
+### Windows
+
 1. Install a C compiler and put it in the `PATH`: [Zig](https://ziglang.org/download/) (`zig cc`), MinGW-w64 (`gcc`) or LLVM `clang`. To use another one set `CC`
    (for example `set CC=C:\tools\zig\zig.exe cc`).
 2. Run `build.bat` (incremental and parallel). It writes `..\build\dowport.exe`; `build.bat -Out some\folder` builds somewhere else, `-Clean` rebuilds everything.
+3. To create two distributable ZIPs in `..\dist\`, run `powershell -NoProfile -ExecutionPolicy Bypass -File package-windows.ps1` from this folder. One includes `original\DOW`; the other leaves out game data and includes instructions for adding it.
+
+### Linux x86-64
+
+On Debian/Ubuntu install `build-essential pkg-config libsdl2-dev libgl-dev`, then run `bash build-linux.sh`. The script writes
+`../build/dowport` by default, alongside the game data and asset folders. Set `CC=clang` or `OUT=/path/to/output`
+to select a compiler or output folder. SDL2 supplies windowing, keyboard/gamepad input and audio; OpenGL 3.3 is
+required for video and supplies the same built-in CRT presets and external RetroArch `.glsl` shaders available in
+the Windows build. If the required OpenGL context cannot be created, Linux reports the error instead of silently
+starting without CRT and external-shader support. SDL selects an available audio backend automatically; desktop
+Linux normally uses its PulseAudio-compatible service (including PipeWire), while systems without it can use
+another SDL backend such as ALSA. Set `SDL_AUDIODRIVER` only to override SDL's selection.
+On WSLg, the program selects Wayland and Mesa's D3D12 driver automatically so OpenGL uses the Windows GPU instead
+of falling back to software rendering; explicit `SDL_VIDEODRIVER` and `GALLIUM_DRIVER` settings are respected.
+
+To create two Linux AppImages after building, run `bash package-linux.sh` from `source/`. They are written to
+`../dist/`: one contains `original/DOW`; the other expects the user to put either supported game-data file in
+`$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`). Use the filename `DOW`
+for Pera Putnik's HDD conversion (CRC32 `6703B50F`), or
+`Dogs of War (1989)(Elite)[cr Replicants][t].st` for the Replicants disk image (CRC32 `F6E84D7A`, 829,440 bytes).
+The AppImage with DOW uses its bundled file by default; to select another data folder, set `DOW_ORIGINAL_DIR` before
+launching it. Both include the Linux executable, SDL2, replacement graphics, languages, music, shaders, defaults and
+documentation; OpenGL, graphics drivers and other system libraries remain host dependencies. Writable settings and
+saves use XDG configuration directories, while generated graphics go under XDG data directories.
+
+To create the two standalone Linux `.tar.xz` packages instead, run `bash package-linux-tar.sh` from `source/`.
+They include SDL2 and a launcher; the host still supplies graphics, audio-server and system libraries.
 
 ## Run
 
-Put the file `FILES/DOW` of your original game in a **`data`** folder next to `dowport.exe` (`data/FILES/DOW`; it is the only original file needed). The first start prepares by itself,
-in a few seconds, `assets\original\` (the graphics dump, see below). Everything else (options, saves, music,
+For the Windows executable and a standalone Linux build, put one data file directly in the existing **`original`**
+folder next to the executable (`dowport.exe` on Windows, `dowport` on Linux). For the Linux AppImage without DOW,
+put it in `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`); the AppImage
+that includes DOW uses its bundled `original/DOW` by default.
+
+- Hard-disk data: name the file `DOW` (no extension); reference CRC32 `6703B50F`. It is Pera Putnik's HDD conversion, from the `FILES` folder of his hard-disk version.
+- Replicants disk image: `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32 `F6E84D7A` (829,440 bytes). Put it directly in `original/`. Detection uses the CRC, so another `.st` filename with the same CRC also works.
+
+If both are present, `original/DOW` takes priority. The disk image is read directly; no replacement `DOW` is created. The first start prepares by itself,
+in a few seconds, `assets/original/` (the graphics dump, see below). Everything else (options, saves, music,
 shaders, graphics packs) is described in the README of the release.
 
 Developer environment variables (only with `DOW_TEST=1`, nothing is saved to `options.json`): `DOW_STATE=file.dows` start from a snapshot, `DOW_SECONDS`, `DOW_SHOTS=dir` +
@@ -68,7 +110,7 @@ void wait_two_vbl(void)
 * **Jumps**: what could be structured is `if`/`else`/`do…while`/`for(;;)`; the rest are `goto L_xxxxxx`. The labels used only for resuming stay
   at the end of the routine, in `resume_dispatch:` (it allows loading a saved state in the middle of a call, and computed jumps).
 * **Yielding control** (`BUDGET_CHECK`, `HOOK`, `IDLE_*`, `SOFT`): points where the game hands control back to the host — for example the VBL wait —; they are in `runtime/cpu.h`.
-  The game runs in a Windows **fiber** (`machine.c`), so every routine is a normal C function with its call stack.
+  The game runs in a Windows fiber or Linux `ucontext` coroutine (`machine.c`), so every routine is a normal C function with its call stack.
 * **Non-local returns**: some routines return "higher up" than usual (they discard their return address and do `rts`). Every `CALL` checks that the popped address
   is the expected one and, if not, the calling routine also ends (`CHECK_NONLOCAL`).
 * **Patches**: `g_cpu.patch[0]` (immunity: `player_start_death` returns at once) and `g_cpu.patch[1]` (enemy script fix) are alternatives of an instruction.
@@ -82,12 +124,12 @@ void wait_two_vbl(void)
 | `tos.c`, `hooks.c`, `state.c`, `boot.c` | mini-TOS (GEMDOS/BIOS/XBIOS), VBL scheduler (timer B palette zones, timer C music, timer A samples, keyboard), host hooks, machine snapshots (`.dows`), start-up state (`boot.c`: what the original loader leaves in memory, built from the game files) |
 | `scene.c`, `sprites.c`, `level.c` | scene capture (units → sprites decoded from the game's tables and validated against what the game draws), vertical level maps for graphics packs |
 | `render.c`, `present.c` | frame composition at the monitor rate (interpolation, enemy filters, scroll fix) |
-| `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, 4-bit sample mixer (multichannel + stereo pan), MP3 via Media Foundation (with music packs), waveOut / WASAPI |
+| `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, 4-bit sample mixer (multichannel + stereo pan), music decoding with the vendored open-source decoders in `../thirdparty/` (MP3 via minimp3, OGG via stb_vorbis, WAV via a built-in reader; music packs), Windows waveOut/WASAPI or Linux SDL2 audio |
 | `lang.c` | language files (`data/languages/*.xml`) and `tr(id)`, used by every text of the menus |
-| `video.c`, `menu.c`, `input.c`, `cfg.c` | OpenGL window and shaders, GDI options menu, keyboard/XInput with redefinable keys and buttons and twin-stick aiming (right stick), `options.json` |
-| `padmap.c`, `padmap_backend.h`, `padmap_gdi.c` | the picture of the pad in the Controls tab: portable core (layout and texts) + drawing backend (GDI on Windows; another system writes its own `padmap_<backend>.c`) |
+| `video.c`, `../port/video_sdl.c`, `menu.c`, `input.c`, `cfg.c` | Windows OpenGL or Linux SDL2 software window, options menu drawn with the portable `../port/ui2d.c` library, keyboard/gamepad with redefinable keys and buttons and twin-stick aiming, `options.json` |
+| `padmap.c`, `padmap_backend.h`, `padmap_ui2d.c` | the picture of the pad in the Controls tab: portable core (layout and texts) + drawing backend (ui2d at 3x, so it draws the same on any OS; another system writes its own `padmap_<backend>.c`) |
 | `gfxpack.c`, `dump.c`, `png.c` | graphics packs, the graphics dump (`assets/original`), PNG reader/writer |
-| `ico.png` | the icon of the executable and of its window: the build script turns it into a multi-size `.ico` (transparency kept) and compiles it as a Windows resource |
+| `ico.png` | Windows executable/window icon; the Windows build turns it into a multi-size `.ico` resource |
 | `emu.c` | emulation thread (50 VBL/s clock, saves, weapon helpers, audio of every VBL, hooks into the game code) |
 | `main.c` | start-up, the window loop (one image per monitor refresh) and shutdown |
 | `app.h`, `app.c` | the state shared by the window-thread code (objects, display, options, folders) and the loading / saving of `options.json` |
@@ -95,15 +137,20 @@ void wait_two_vbl(void)
 | `menu_ui.c`, `menu_options.c`, `musicpacks.c` | opening / closing the menu and redefining controls; what the menu contains and what each option does; the music packs found in `music/` |
 | `devtest.c` | scripted input for the automatic tests (only with `DOW_TEST=1`) |
 
+**The portable layer (`port/`).** `port.c` / `port.h` wrap the few OS services the host needs besides the window (threads, mutexes, the fatal-error dialog); `ui2d.c` / `ui2d.h` are a small
+anti-aliased 2-D library (polygons by scanline, rounded rectangles, discs, strokes) with text rendered by `stb_truetype` from the two embedded Noto Sans faces (`ui2d_fonts.c`, generated from
+the `.ttf` files in `thirdparty/fonts/` by `make_fonts.py`). The menu and the pad picture draw with it, so they do not depend on GDI and render identically on any OS; the fonts use the same
+cell-height convention as the GDI code they replaced (`CreateFontA(-height)`), so the layout did not change.
+
 **How the host is written.** The files of `host/` are formatted with `clang-format` (`host/.clang-format`; run `clang-format -i *.c *.h` in that folder): 120 columns, one statement per line,
 every function with a comment that says what it is for, comments in English, and the sections of a file marked with `/* ---- title ---- */`. `app.h` describes how the window-thread code is divided and
 what is shared. The data the program shares between modules has descriptive names (`master_volume`, `audio_out`, `lead_with_interp`...). The drawing of the pad picture is separated from its layout
 (`padmap.c` / `padmap_backend.h`) so that a port to another system only has to write a new backend.
 
-**Start-up** (`boot.c`): the original loader (`RUNME.TOS` unpacks and runs HAGA, which probes the machine, shows a menu, reads `FILES/DOW`, patches the game and jumps into it)
-always leaves the same memory on this machine, and `boot_state_make` builds it: the game's block (60000 bytes of `FILES/DOW` from offset `$5141C`) at `$2C00` and `$81000`,
+**Start-up** (`boot.c`): the original loader (`RUNME.TOS` unpacks and runs HAGA, which probes the machine, shows a menu, reads game data, patches the game and jumps into it)
+always leaves the same memory on this machine, and `boot_state_make` builds it: the game's block (60000 bytes from logical offset `$5141C`) at `$2C00` and `$81000`,
 the few variables that the loader's code (the hook at `$2000`, the HAGA library at `$3F8000`) still holds and the translated code reads (`LOADER_DATA`, TOS 2.06, 4 MB), and the CPU at the game's entry.
-No 68000 code is executed from any file (the loader's routines are translated like the game's), so `RUNME.TOS` and `HAGA` are not needed; `FILES/DOW` only provides data.
+No 68000 code is executed from any file (the loader's routines are translated like the game's), so `RUNME.TOS` and `HAGA` are not needed; the selected original source only provides data.
 It was checked against the real loader by playing the intro, the shop and the 12 missions (the graphics dump comes out identical). If the game ever jumps to an address that is not game code the host logs it and goes back to an earlier snapshot.
 
 **Graphics dump** (`dump.c`): when `assets/original/index.json` does not exist the program plays the game by itself (intro → title → map → shop → each of the 12 missions
@@ -117,11 +164,11 @@ The translation was checked instruction by instruction and VBL by VBL against Un
 
 ---
 
-# Dogs of War – código fuente nativo en C (`source/`)
+# Dogs of War – código fuente nativo en C para Windows y Linux (`source/`)
 
-Este es el programa completo del port para Windows de *Dogs of War* (Atari ST, versión HAGA de Pera Putnik): el código 68000 del propio juego traducido a **C**
+Este es el programa completo del port para Windows/Linux de *Dogs of War* (Atari ST, versión HAGA de Pera Putnik): el código 68000 del propio juego traducido a **C**
 (una función C por rutina del juego, con la instrucción original en un comentario, registros, variables y registros de hardware con nombre, y estructuras `if` / `else` /
-`do … while` en lugar de saltos), más un programa anfitrión nativo para Windows (ventana, OpenGL, sonido, entrada, menú, packs gráficos). Solo hace falta un compilador de C para construirlo.
+`do … while` en lugar de saltos), más hosts nativos para Windows y Linux. Windows usa OpenGL y audio/entrada nativos; Linux usa SDL2.
 
 > El juego es abandonware. `generated/` es la traducción del programa del juego a C, y el ejecutable la contiene.
 
@@ -129,24 +176,48 @@ Este es el programa completo del port para Windows de *Dogs of War* (Atari ST, v
 
 ```
 source/
-  build.bat, build.ps1   script de compilación (necesita un compilador de C: Zig, MinGW-w64 gcc o clang)
+  build.bat, build.ps1   compilación de Windows (Zig, MinGW-w64 gcc o clang)
+  build-linux.sh         compilación Linux x86-64 (GCC/Clang, pkg-config, SDL2)
   generated/             el juego: game_XXXX.c (una función C por rutina), game.h, globals.h, dispatch.c
   runtime/               la «máquina» que rodea al código del juego
     cpu.h                registros, flags, macros (CALL, RTS, SETW, FL_*, COND, HOOK, IDLE_*...)
     machine.c            memoria, E/S del STE (vídeo, MFP, YM2149, teclado), interrupciones, cambio de contexto (fibras)
-  host/                  el programa para Windows (véase más abajo)
+  host/                  el host común del juego y el backend de Windows
+  port/                  capa de portabilidad POSIX/Windows, backends Linux SDL2 y biblioteca 2-D portable (ui2d)
+                         que dibuja los menús (rasterizador + stb_truetype + Noto Sans incrustada)
+  thirdparty/            código abierto incluido en el árbol y sus licencias: minimp3, stb_vorbis, stb_truetype, Noto Sans
+                         (véase thirdparty/THIRD_PARTY.md)
 ```
 
 ## Compilación
+
+### Windows
 
 1. Instala un compilador de C y ponlo en el `PATH`: [Zig](https://ziglang.org/download/) (`zig cc`), MinGW-w64 (`gcc`) o LLVM `clang`. Para usar otro define `CC`
    (por ejemplo `set CC=C:\tools\zig\zig.exe cc`).
 2. Ejecuta `build.bat` (incremental y en paralelo). Escribe `..\build\dowport.exe`; `build.bat -Out alguna\carpeta` compila en otro sitio, `-Clean` reconstruye todo.
 
+### Linux x86-64
+
+En Debian/Ubuntu instala `build-essential pkg-config libsdl2-dev` y ejecuta `bash build-linux.sh`. Por defecto, genera
+`../build/dowport`, junto a las carpetas de datos y recursos. Usa `CC=clang` o `OUT=/ruta/de/salida` para elegir
+compilador o carpeta de salida. SDL2 proporciona ventana, teclado/mandos y audio; el vídeo Linux se renderiza por
+OpenGL 3.3 y admite los mismos shaders CRT y externos que Windows. SDL elige automáticamente un backend de audio
+disponible; en escritorios Linux suele usar el servicio compatible con PulseAudio (también mediante PipeWire) y,
+si no está, puede usar otro backend como ALSA. Define `SDL_AUDIODRIVER` solo para anular esa selección.
+
 ## Ejecución
 
-Pon el fichero `FILES/DOW` de tu juego original en una carpeta **`data`** junto a `dowport.exe` (`data/FILES/DOW`; es el único fichero original que hace falta). El primer arranque prepara por sí solo,
-en unos segundos, `assets\original\` (el volcado de gráficos, véase más abajo). Todo lo demás (opciones, partidas guardadas, música,
+Para el ejecutable de Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente
+en la carpeta **`original`** junto al ejecutable (`dowport.exe` en Windows, `dowport` en Linux). Para la AppImage de
+Linux sin DOW, colócalo en `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`);
+la AppImage que incluye DOW usa por defecto el `original/DOW` incluido.
+
+- Datos de disco duro: el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia `6703B50F`. Es la conversión a disco duro de Pera Putnik, en la carpeta `FILES` de su versión de disco duro.
+- Imagen de disco Replicants: `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32 `F6E84D7A` (829.440 bytes). Colócala directamente en `original/`. Se detecta por CRC, así que también sirve otro nombre `.st` con el mismo CRC.
+
+Si están las dos, se usa `original/DOW`. La imagen se lee directamente; no se crea un `DOW` alternativo. El primer arranque prepara por sí solo,
+en unos segundos, `assets/original/` (el volcado de gráficos, véase más abajo). Todo lo demás (opciones, partidas guardadas, música,
 shaders, packs gráficos) está descrito en el README de la versión publicada.
 
 Variables de entorno para desarrollo (solo con `DOW_TEST=1`, no se guarda nada en `options.json`): `DOW_STATE=fichero.dows` arranca desde una instantánea, `DOW_SECONDS`, `DOW_SHOTS=dir` +
@@ -187,7 +258,7 @@ void wait_two_vbl(void)
 * **Saltos**: lo que se pudo estructurar son `if`/`else`/`do…while`/`for(;;)`; el resto son `goto L_xxxxxx`. Las etiquetas que solo se usan para reanudar quedan
   al final de la rutina, en `resume_dispatch:` (permite cargar un estado guardado en mitad de una llamada, y los saltos calculados).
 * **Ceder el control** (`BUDGET_CHECK`, `HOOK`, `IDLE_*`, `SOFT`): puntos donde el juego devuelve el control al anfitrión —por ejemplo la espera del VBL—; están en `runtime/cpu.h`.
-  El juego se ejecuta en una **fibra** de Windows (`machine.c`), así que cada rutina es una función C normal con su pila de llamadas.
+  El juego se ejecuta en una fibra de Windows o una corrutina `ucontext` de Linux (`machine.c`), así que cada rutina es una función C normal con su pila de llamadas.
 * **Retornos no locales**: algunas rutinas vuelven «más arriba» de lo normal (descartan su dirección de retorno y hacen `rts`). Cada `CALL` comprueba que la dirección desapilada
   sea la esperada y, si no lo es, la rutina que llama también termina (`CHECK_NONLOCAL`).
 * **Parches**: `g_cpu.patch[0]` (inmunidad: `player_start_death` vuelve de inmediato) y `g_cpu.patch[1]` (corrección del script de enemigos) son alternativas de una instrucción.
@@ -201,12 +272,12 @@ void wait_two_vbl(void)
 | `tos.c`, `hooks.c`, `state.c`, `boot.c` | mini-TOS (GEMDOS/BIOS/XBIOS), planificador del VBL (zonas de paleta del timer B, música del timer C, muestras del timer A, teclado), ganchos del anfitrión, instantáneas de la máquina (`.dows`), estado de arranque (`boot.c`: lo que el cargador original deja en memoria, construido a partir de los ficheros del juego) |
 | `scene.c`, `sprites.c`, `level.c` | captura de escena (unidades → sprites decodificados de las tablas del juego y validados con lo que el juego dibuja), mapas verticales de los niveles para los packs gráficos |
 | `render.c`, `present.c` | composición de fotogramas a la frecuencia del monitor (interpolación, filtros de enemigos, corrección del scroll) |
-| `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, mezclador de muestras de 4 bits (multicanal + panorámica estéreo), MP3 mediante Media Foundation (con bancos de música), waveOut / WASAPI |
+| `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, mezclador de muestras de 4 bits (multicanal + panorámica estéreo), decodificación de música con los decodificadores abiertos de `../thirdparty/` (MP3 vía minimp3, OGG vía stb_vorbis, WAV con un lector propio; bancos de música), waveOut/WASAPI en Windows o audio SDL2 en Linux |
 | `lang.c` | ficheros de idioma (`data/languages/*.xml`) y `tr(id)`, usados por todos los textos de los menús |
-| `video.c`, `menu.c`, `input.c`, `cfg.c` | ventana OpenGL y shaders, menú de opciones GDI, teclado/XInput con teclas y botones redefinibles y apuntado con doble stick (stick derecho), `options.json` |
-| `padmap.c`, `padmap_backend.h`, `padmap_gdi.c` | la imagen del mando de la pestaña Controles: núcleo portable (disposición y textos) + backend de dibujo (GDI en Windows; otro sistema escribe su propio `padmap_<backend>.c`) |
+| `video.c`, `../port/video_sdl.c`, `menu.c`, `input.c`, `cfg.c` | ventana OpenGL en Windows o SDL2 por software en Linux, menú de opciones con `../port/ui2d.c`, teclado/mandos con teclas y botones redefinibles y apuntado con doble stick, `options.json` |
+| `padmap.c`, `padmap_backend.h`, `padmap_ui2d.c` | la imagen del mando de la pestaña Controles: núcleo portable (disposición y textos) + backend de dibujo (ui2d a 3x, así que se dibuja igual en cualquier sistema; otro sistema escribe su propio `padmap_<backend>.c`) |
 | `gfxpack.c`, `dump.c`, `png.c` | packs gráficos, el volcado de gráficos (`assets/original`), lector/escritor de PNG |
-| `ico.png` | el icono del ejecutable y de su ventana: el script de compilación lo convierte en un `.ico` de varios tamaños (conservando la transparencia) y lo compila como recurso de Windows |
+| `ico.png` | icono del ejecutable y de la ventana en Windows; el script de Windows lo convierte en un recurso `.ico` |
 | `emu.c` | hilo de emulación (reloj de 50 VBL/s, guardados, ayudas de armas, audio de cada VBL, ganchos en el código del juego) |
 | `main.c` | arranque, el bucle de la ventana (una imagen por refresco del monitor) y el cierre |
 | `app.h`, `app.c` | el estado compartido por el código del hilo de la ventana (objetos, pantalla, opciones, carpetas) y la carga / el guardado de `options.json` |
@@ -214,15 +285,20 @@ void wait_two_vbl(void)
 | `menu_ui.c`, `menu_options.c`, `musicpacks.c` | abrir / cerrar el menú y redefinir controles; qué contiene el menú y qué hace cada opción; los packs de música que hay en `music/` |
 | `devtest.c` | entrada guionizada para las pruebas automáticas (solo con `DOW_TEST=1`) |
 
+**La capa portable (`port/`).** `port.c` / `port.h` envuelven los pocos servicios del sistema que el anfitrión necesita además de la ventana (hilos, mutexes, el diálogo de error fatal);
+`ui2d.c` / `ui2d.h` son una pequeña biblioteca 2-D con antialiasing (polígonos por scanlines, rectángulos redondeados, discos, trazos) con texto renderizado por `stb_truetype` desde las dos
+fuentes Noto Sans incrustadas (`ui2d_fonts.c`, generado a partir de los `.ttf` de `thirdparty/fonts/` por `make_fonts.py`). El menú y la imagen del mando dibujan con ella, así que no dependen
+de GDI y se ven igual en cualquier sistema; las fuentes usan la misma convención de altura de celda que el código GDI que sustituyeron (`CreateFontA(-altura)`), de modo que la disposición no cambió.
+
 **Cómo está escrito el anfitrión.** Los ficheros de `host/` están formateados con `clang-format` (`host/.clang-format`; ejecuta `clang-format -i *.c *.h` en esa carpeta): 120 columnas, una sentencia por línea,
 cada función con un comentario que dice para qué sirve, comentarios en inglés y las secciones de un fichero marcadas con `/* ---- título ---- */`. `app.h` describe cómo se reparte el código del hilo de la
 ventana y qué se comparte. Los datos que el programa comparte entre módulos tienen nombres descriptivos (`master_volume`, `audio_out`, `lead_with_interp`...). El dibujo de la imagen del mando está separado de su
 disposición (`padmap.c` / `padmap_backend.h`) para que un port a otro sistema solo tenga que escribir un backend nuevo.
 
-**Arranque** (`boot.c`): el cargador original (`RUNME.TOS` descomprime y ejecuta HAGA, que sondea la máquina, muestra un menú, lee `FILES/DOW`, parchea el juego y salta a él)
-deja siempre la misma memoria en esta máquina, y `boot_state_make` la construye: el bloque del juego (60000 bytes de `FILES/DOW` desde el desplazamiento `$5141C`) en `$2C00` y `$81000`,
+**Arranque** (`boot.c`): el cargador original (`RUNME.TOS` descomprime y ejecuta HAGA, que sondea la máquina, muestra un menú, lee los datos del juego, lo parchea y salta a él)
+deja siempre la misma memoria en esta máquina, y `boot_state_make` la construye: el bloque del juego (60000 bytes desde el desplazamiento lógico `$5141C`) en `$2C00` y `$81000`,
 las pocas variables que conserva el código del cargador (el gancho de `$2000`, la biblioteca HAGA de `$3F8000`) y que lee el código traducido (`LOADER_DATA`, TOS 2.06, 4 MB), y la CPU en el punto de entrada del juego.
-No se ejecuta código 68000 de ningún fichero (las rutinas del cargador están traducidas igual que las del juego), así que `RUNME.TOS` y `HAGA` no hacen falta; `FILES/DOW` solo aporta datos.
+No se ejecuta código 68000 de ningún fichero (las rutinas del cargador están traducidas igual que las del juego), así que `RUNME.TOS` y `HAGA` no hacen falta; la fuente original seleccionada solo aporta datos.
 Se comprobó contra el cargador real jugando la intro, la tienda y las 12 misiones (el volcado de gráficos sale idéntico). Si alguna vez el juego salta a una dirección que no es código del juego, el anfitrión lo registra y vuelve a una instantánea anterior.
 
 **Volcado de gráficos** (`dump.c`): cuando no existe `assets/original/index.json` el programa juega al juego por sí mismo (intro → título → mapa → tienda → cada una de las 12 misiones

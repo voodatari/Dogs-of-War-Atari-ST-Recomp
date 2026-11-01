@@ -8,10 +8,11 @@
  *     ...
  *   </language>
  * Entities &amp; &lt; &gt; &quot; &apos; and &#N; (N = a number) are understood; the text is trimmed; comments <!-- -->
- * are skipped. The files are UTF-8; the menus are drawn with the ANSI code page, so characters outside it (and only
- * those) are replaced by '?'.
+ * are skipped. The files are UTF-8 and their texts stay UTF-8: the portable menus (ui2d) decode UTF-8, and an invalid
+ * byte falls back to the 1252 code page.
  */
 #include "lang.h"
+#include "port.h"
 #include <stdarg.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -36,24 +37,15 @@ static int cmp_entry(const void *a, const void *b) {
     return strcmp(((const Entry *)a)->id, ((const Entry *)b)->id);
 }
 
-/* UTF-8 -> ANSI (code page of the system) */
-static char *utf8_to_ansi(const char *s) {
+/* Copies the text: it stays UTF-8 (the portable menus decode UTF-8; an invalid byte falls back to code page 1252). */
+static char *utf8_dup(const char *s) {
 #ifdef _WIN32
-    int wn = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
-    if (wn <= 0)
-        return _strdup(s);
-    wchar_t *w = (wchar_t *)malloc((size_t)wn * sizeof(wchar_t));
-    MultiByteToWideChar(CP_UTF8, 0, s, -1, w, wn);
-    int an = WideCharToMultiByte(CP_ACP, 0, w, -1, NULL, 0, "?", NULL);
-    char *a = (char *)malloc((size_t)an + 1);
-    WideCharToMultiByte(CP_ACP, 0, w, -1, a, an, "?", NULL);
-    free(w);
-    return a;
+    return _strdup(s);
 #else
     return strdup(s);
 #endif
 }
-/* Replaces the XML entities (&amp; &lt; &gt; &quot; &apos; &#N;) and converts the text to the system code page. */
+/* Replaces the XML entities (&amp; &lt; &gt; &quot; &apos; &#N;) and keeps the text (UTF-8). */
 static void decode_entities(char *s) {
     char *o = s;
     for (char *p = s; *p;) {
@@ -154,7 +146,7 @@ static int load_file(const char *path, Table *t) {
             char nm[200];
             attr(tag, "name", nm, sizeof nm);
             decode_entities(nm);
-            char *a = utf8_to_ansi(nm);
+            char *a = utf8_dup(nm);
             snprintf(t->name, sizeof t->name, "%s", a);
             free(a);
             attr(tag, "code", t->code, sizeof t->code);
@@ -190,14 +182,14 @@ static int load_file(const char *path, Table *t) {
                     z--;
                 *z = 0;
                 decode_entities(a);
-                char *ansi = utf8_to_ansi(a);
+                char *u8 = utf8_dup(a);
                 free(txt);
                 if (t->n == cap) {
                     cap *= 2;
                     t->e = (Entry *)realloc(t->e, sizeof(Entry) * (size_t)cap);
                 }
-                t->e[t->n].id = _strdup(id);
-                t->e[t->n].text = ansi;
+                t->e[t->n].id = utf8_dup(id);
+                t->e[t->n].text = u8;
                 t->n++;
             }
             p = end + 9;
@@ -220,32 +212,27 @@ static int ensure(int i) {
     return 0;
 }
 
+static int load_language(const char *name, void *context) {
+    const char *dir = (const char *)context;
+    if (ntabs >= MAXLANG)
+        return 0;
+    snprintf(paths[ntabs], sizeof paths[ntabs], "%s/%s", dir, name);
+    memset(&tabs[ntabs], 0, sizeof(Table));
+    loaded[ntabs] = 0;
+    if (load_file(paths[ntabs], &tabs[ntabs])) {
+        loaded[ntabs] = 1;
+        ntabs++;
+    }
+    return 1;
+}
+
 /* Looks for the *.xml language files in the folder and loads the English one (the fallback); the current language
  * stays English until lang_set. */
 void lang_init(const char *dir) {
     ntabs = 0;
     cur = 0;
     fallback = -1;
-#ifdef _WIN32
-    char pat[760];
-    snprintf(pat, sizeof pat, "%s/*.xml", dir);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
-    if (h != INVALID_HANDLE_VALUE) {
-        do {
-            if (ntabs >= MAXLANG)
-                break;
-            snprintf(paths[ntabs], sizeof paths[ntabs], "%s/%s", dir, fd.cFileName);
-            memset(&tabs[ntabs], 0, sizeof(Table));
-            loaded[ntabs] = 0;
-            if (load_file(paths[ntabs], &tabs[ntabs])) {
-                loaded[ntabs] = 1;
-                ntabs++;
-            }
-        } while (FindNextFileA(h, &fd));
-        FindClose(h);
-    }
-#endif
+    port_list_files(dir, ".xml", load_language, (void *)dir);
     for (int i = 0; i < ntabs; i++)
         if (!_stricmp(tabs[i].code, "en"))
             fallback = i;

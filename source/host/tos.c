@@ -7,6 +7,7 @@
  * keyboard.
  */
 #include "host.h"
+#include "port.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -115,6 +116,8 @@ static void cpu_set_isp(uint32_t v) {
 /* file handles: they are not reused (6, 7, 8...) and the game may leave many open */
 #define MAXH 8192
 static FILE *files[MAXH];
+static uint8_t virtual_files[MAXH];
+static uint32_t virtual_positions[MAXH];
 static int nexth = 6;
 /* the game must yield control on returning from the call */
 static int stop_flag = 0;
@@ -122,33 +125,26 @@ static int polls = 0;
 static uint8_t ikbd_cmd[8];
 static int ikbd_n = 0;
 
-#ifdef _WIN32
+typedef struct {
+    const char *name;
+    char *out;
+    size_t cap;
+    int found;
+} CiFind;
+static int ci_find_entry(const char *entry, void *context) {
+    CiFind *find = (CiFind *)context;
+    if (_stricmp(entry, find->name) != 0)
+        return 1;
+    snprintf(find->out, find->cap, "%s", entry);
+    find->found = 1;
+    return 0;
+}
 /* looks for `name` case-insensitively inside `dir` */
 static int ci_find(const char *dir, const char *name, char *out, size_t n) {
-    char pat[700];
-    snprintf(pat, sizeof pat, "%s\\*", dir);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
-    if (h == INVALID_HANDLE_VALUE)
-        return 0;
-    int ok = 0;
-    do {
-        if (_stricmp(fd.cFileName, name) == 0) {
-            snprintf(out, n, "%s", fd.cFileName);
-            ok = 1;
-            break;
-        }
-    } while (FindNextFileA(h, &fd));
-    FindClose(h);
-    return ok;
+    CiFind find = {name, out, n, 0};
+    port_list_entries(dir, -1, NULL, ci_find_entry, &find);
+    return find.found;
 }
-#else
-static int ci_find(const char *dir, const char *name, char *out, size_t n) {
-    (void)dir;
-    snprintf(out, n, "%s", name);
-    return 1;
-}
-#endif
 
 /* Turns a GEMDOS path of the game ("A:\FILES\DOW", relative to the current directory) into a real path inside the
  * game folder, looking every part up case-insensitively. Returns 0 if a part does not exist. */
@@ -213,7 +209,40 @@ static int ends_with_i(const char *s, const char *suf) {
         if (x != y)
             return 0;
     }
+
     return 1;
+}
+
+static int path_equal_i(const char *a, const char *b) {
+    while (*a && *b) {
+        char x = *a++, y = *b++;
+        if (x >= 'a' && x <= 'z')
+            x -= 32;
+        if (y >= 'a' && y <= 'z')
+            y -= 32;
+        if (x != y)
+            return 0;
+    }
+    return *a == *b;
+}
+
+static int is_virtual_dow_name(const char *name) {
+    char path[300];
+    size_t n = 0;
+    if (name[0] && name[1] == ':')
+        name += 2;
+    if (*name != '\\' && *name != '/' && tos.curdir[0])
+        n = (size_t)snprintf(path, sizeof path, "%s/%s", tos.curdir, name);
+    else
+        n = (size_t)snprintf(path, sizeof path, "%s", name);
+    if (n >= sizeof path)
+        return 0;
+    for (size_t i = 0; path[i]; i++)
+        if (path[i] == '\\')
+            path[i] = '/';
+    while (path[0] == '/')
+        memmove(path, path + 1, strlen(path));
+    return path_equal_i(path, "FILES/DOW");
 }
 
 /* ---- the sound chip ---- */
@@ -628,6 +657,17 @@ static uint32_t gemdos(uint32_t fn, uint32_t sp) {
     if (fn == 0x3D) { /* Fopen */
         char p[260], real[700];
         cstr_at(A4(2), p, sizeof p);
+        if (game_data_size() && is_virtual_dow_name(p)) {
+            int h = nexth;
+            if (h >= MAXH)
+                return 0xFFFFFFDFu;
+            virtual_files[h] = 1;
+            virtual_positions[h] = 0;
+            nexth = h + 1;
+            if (getenv("DOW_FOPEN"))
+                host_log_file("Fopen %s -> h%d (selected original data, vbl %u)", p, h, tos.vbl);
+            return (uint32_t)h;
+        }
         if (resolve_path(p, real, sizeof real) && file_exists(real) && !ends_with_i(real, ".HST")) {
             int h = nexth;
             if (h >= MAXH)
@@ -647,19 +687,30 @@ static uint32_t gemdos(uint32_t fn, uint32_t sp) {
         uint32_t h = A2(2);
         if (getenv("DOW_FOPEN"))
             host_log_file("Fclose h%u (vbl %u)", h, tos.vbl);
-        if (h < MAXH && files[h]) {
-            fclose(files[h]);
-            files[h] = NULL;
+        if (h < MAXH) {
+            if (files[h]) {
+                fclose(files[h]);
+                files[h] = NULL;
+            }
+            virtual_files[h] = 0;
+            virtual_positions[h] = 0;
         }
         return 0;
     }
     if (fn == 0x3F) { /* Fread(h, n, buf) */
         uint32_t h = A2(2), n = A4(4), buf = A4(8);
-        if (h >= MAXH || !files[h])
+        if (h >= MAXH || (!files[h] && !virtual_files[h]))
             return 0xFFFFFFDFu;
         if ((uint64_t)buf + n > RAMSZ)
             n = buf < RAMSZ ? RAMSZ - buf : 0;
-        size_t got = n ? fread(ram + buf, 1, n, files[h]) : 0;
+        uint8_t *dest = ram + (buf < RAMSZ ? buf : RAMSZ);
+        size_t got;
+        if (virtual_files[h]) {
+            got = game_data_read(virtual_positions[h], dest, n);
+            virtual_positions[h] += (uint32_t)got;
+        } else {
+            got = n ? fread(dest, 1, n, files[h]) : 0;
+        }
         if (getenv("DOW_FOPEN"))
             host_log_file("Fread h%u n=%u -> $%X got=%u (vbl %u)", h, n, buf, (unsigned)got, tos.vbl);
         return (uint32_t)got;
@@ -668,9 +719,18 @@ static uint32_t gemdos(uint32_t fn, uint32_t sp) {
     if (fn == 0x42) {
         int32_t off = (int32_t)A4(2);
         uint32_t h = mr16(sp + 6), mode = mr16(sp + 8);
-        if (h >= MAXH || !files[h])
+        if (h >= MAXH || (!files[h] && !virtual_files[h]))
             return 0xFFFFFFDFu;
-        fseek(files[h], off, mode == 0 ? SEEK_SET : mode == 1 ? SEEK_CUR : SEEK_END);
+        if (virtual_files[h]) {
+            int64_t base = mode == 0 ? 0 : mode == 1 ? virtual_positions[h] : (int64_t)game_data_size();
+            int64_t pos = base + off;
+            if (pos < 0 || pos > UINT32_MAX)
+                return 0xFFFFFFFFu;
+            virtual_positions[h] = (uint32_t)pos;
+            return (uint32_t)pos;
+        }
+        if (fseek(files[h], off, mode == 0 ? SEEK_SET : mode == 1 ? SEEK_CUR : SEEK_END) != 0)
+            return 0xFFFFFFFFu;
         return (uint32_t)ftell(files[h]);
     }
     /* Malloc / Mxalloc */

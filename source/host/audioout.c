@@ -5,6 +5,7 @@
  * +-0.4 %) and if it overfills the oldest data is discarded.
  */
 #include "audio.h"
+#include "port.h"
 #ifdef _WIN32
 #define COBJMACROS
 #include <windows.h>
@@ -13,6 +14,8 @@
 #include <objbase.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
+#else
+#include <SDL.h>
 #endif
 
 #define RING_BYTES (1 << 22)
@@ -29,8 +32,8 @@ struct AudioOut {
     int underruns, drops;
     double last_push_t; /* when the emulation thread last gave audio (to explain a gap) */
     long pushed;
+    PortMutex *cs;
 #ifdef _WIN32
-    CRITICAL_SECTION cs;
     HWAVEOUT hwo;
     WAVEHDR hdr[NBUF];
     int16_t *bufs[NBUF];
@@ -41,6 +44,9 @@ struct AudioOut {
     HANDLE wa_thread, wa_ready, wa_stopev;
     volatile int wa_stop, wa_ok;
     double wa_ms;
+#else
+    SDL_AudioDeviceID device;
+    int device_frames;
 #endif
 };
 
@@ -69,13 +75,9 @@ void audio_set_target(AudioOut *a, double ms) {
 }
 /* How much audio is waiting in the buffer, in ms. */
 double audio_level_ms(AudioOut *a) {
-#ifdef _WIN32
-    EnterCriticalSection(&a->cs);
-#endif
+    port_mutex_lock(a->cs);
     double v = (double)a->len / 4.0 / a->fs * 1000.0;
-#ifdef _WIN32
-    LeaveCriticalSection(&a->cs);
-#endif
+    port_mutex_unlock(a->cs);
     return v;
 }
 /* Counters since the start: buffer underruns (gaps), drops (data discarded because the buffer overfilled) and samples
@@ -91,9 +93,7 @@ void audio_stats(AudioOut *a, int *u, int *d, long *p) {
 void audio_push(AudioOut *a, const int16_t *stereo, int frames) {
     if (!a)
         return;
-#ifdef _WIN32
-    EnterCriticalSection(&a->cs);
-#endif
+    port_mutex_lock(a->cs);
     size_t n = (size_t)frames * 4;
     const uint8_t *s = (const uint8_t *)stereo;
     if (a->len + n > RING_BYTES)
@@ -114,9 +114,7 @@ void audio_push(AudioOut *a, const int16_t *stereo, int frames) {
         ring_drop(a, over);
         a->drops++;
     }
-#ifdef _WIN32
-    LeaveCriticalSection(&a->cs);
-#endif
+    port_mutex_unlock(a->cs);
 }
 
 /* Fills the device's buffer from the circular buffer. The delay is steered towards the target: if the buffer is too
@@ -125,9 +123,7 @@ void audio_push(AudioOut *a, const int16_t *stereo, int frames) {
 static void fill(AudioOut *a, int16_t *dst, int frames) {
     size_t need = (size_t)frames * 4;
     uint8_t *out = (uint8_t *)dst;
-#ifdef _WIN32
-    EnterCriticalSection(&a->cs);
-#endif
+    port_mutex_lock(a->cs);
     size_t target = bytes_for(a, a->target_ms);
     if (!a->started) {
         if (a->len >= target)
@@ -194,9 +190,7 @@ static void fill(AudioOut *a, int16_t *dst, int frames) {
         }
     }
 done:
-#ifdef _WIN32
-    LeaveCriticalSection(&a->cs);
-#endif
+    port_mutex_unlock(a->cs);
     return;
 }
 
@@ -371,9 +365,9 @@ int audio_set_lowlat(AudioOut *a, int on) {
         return 0;
     if (on && a->mode == 0) {
         wm_close(a);
-        EnterCriticalSection(&a->cs);
+        port_mutex_lock(a->cs);
         a->started = 0;
-        LeaveCriticalSection(&a->cs);
+        port_mutex_unlock(a->cs);
         if (wa_open(a)) {
             a->mode = 1;
             return 1;
@@ -385,16 +379,14 @@ int audio_set_lowlat(AudioOut *a, int on) {
     if (!on && a->mode == 1) {
         wa_close(a);
         a->mode = 0;
-        EnterCriticalSection(&a->cs);
+        port_mutex_lock(a->cs);
         a->started = 0;
-        LeaveCriticalSection(&a->cs);
+        port_mutex_unlock(a->cs);
         wm_open(a);
     }
     return a->mode == 1 || !on;
 #else
-    (void)a;
-    (void)on;
-    return 0;
+    return !a ? 0 : !on;
 #endif
 }
 /* The latency of the device itself (what is queued in it), in ms: about 80 ms with winmm, one chunk with WASAPI. */
@@ -405,41 +397,89 @@ double audio_device_ms(AudioOut *a) {
         return 0;
     return a->mode == 1 ? a->wa_ms : 82.0;
 #else
-    (void)a;
-    return 0;
+    return a ? (double)a->device_frames * 1000.0 / a->fs : 0;
 #endif
 }
 
+#ifndef _WIN32
+static void sdl_audio_cb(void *userdata, Uint8 *stream, int len) {
+    AudioOut *a = (AudioOut *)userdata;
+    if (len > 0)
+        fill(a, (int16_t *)stream, len / 4);
+}
+#endif
+
 /* Opens the audio output at fs Hz with a buffer target of target_ms. NULL if there is no device. */
 AudioOut *audio_open(int fs, double target_ms) {
-#ifdef _WIN32
     AudioOut *a = (AudioOut *)calloc(1, sizeof(AudioOut));
+    if (!a)
+        return NULL;
     a->fs = fs;
     a->target_ms = target_ms;
     a->ring = (uint8_t *)malloc(RING_BYTES);
-    InitializeCriticalSection(&a->cs);
-    if (!wm_open(a)) {
-        host_log("Sound disabled: could not open the audio device");
+    a->cs = port_mutex_new();
+    if (!a->ring || !a->cs) {
         free(a->ring);
+        port_mutex_free(a->cs);
         free(a);
         return NULL;
     }
-    return a;
+#ifdef _WIN32
+    if (!wm_open(a)) {
+        host_log("Sound disabled: could not open the audio device");
+        free(a->ring);
+        port_mutex_free(a->cs);
+        free(a);
+        return NULL;
+    }
 #else
-    (void)fs;
-    (void)target_ms;
-    return NULL;
+    SDL_AudioSpec want, got;
+    SDL_zero(want);
+    want.freq = fs;
+    want.format = AUDIO_S16SYS;
+    want.channels = 2;
+    want.samples = 1024;
+    want.callback = sdl_audio_cb;
+    want.userdata = a;
+    int initialized = SDL_InitSubSystem(SDL_INIT_AUDIO) == 0;
+    if (initialized)
+        a->device = SDL_OpenAudioDevice(NULL, 0, &want, &got, 0);
+    else
+        host_log("SDL audio initialization failed: %s", SDL_GetError());
+    if (!a->device) {
+        host_log("Sound disabled: SDL could not open an audio device (driver %s): %s",
+                 SDL_GetCurrentAudioDriver() ? SDL_GetCurrentAudioDriver() : "default", SDL_GetError());
+        if (initialized)
+            SDL_QuitSubSystem(SDL_INIT_AUDIO);
+        free(a->ring);
+        port_mutex_free(a->cs);
+        free(a);
+        return NULL;
+    }
+    a->device_frames = got.samples;
+    host_log("Audio: SDL driver %s, %d Hz, %d channels, %d samples",
+             SDL_GetCurrentAudioDriver() ? SDL_GetCurrentAudioDriver() : "unknown", got.freq, got.channels,
+             got.samples);
+    SDL_PauseAudioDevice(a->device, 0);
 #endif
+    return a;
 }
 
 /* Closes the output and frees it. */
 void audio_close(AudioOut *a) {
-#ifdef _WIN32
     if (!a)
         return;
+#ifdef _WIN32
     if (a->mode == 1)
         wa_close(a);
     else
         wm_close(a);
+#else
+    SDL_PauseAudioDevice(a->device, 1);
+    SDL_CloseAudioDevice(a->device);
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 #endif
+    free(a->ring);
+    port_mutex_free(a->cs);
+    free(a);
 }

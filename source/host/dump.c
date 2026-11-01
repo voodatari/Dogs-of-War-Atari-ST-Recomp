@@ -12,9 +12,9 @@
 #include "level.h"
 #include "gfxpack.h"
 #include "input.h"
+#include "port.h"
 #ifdef _WIN32
 #include <windows.h>
-#include <direct.h>
 #endif
 
 #define NMISSIONS 12
@@ -56,9 +56,7 @@ static void make_dirs(const char *file) {
         if (*c == '/' || *c == '\\') {
             char t = *c;
             *c = 0;
-#ifdef _WIN32
-            _mkdir(p);
-#endif
+            port_mkdir(p);
             *c = t;
         }
 }
@@ -1556,13 +1554,12 @@ int dump_original(const char *game_dir, const char *out_dir, void (*progress)(co
            "draws text straight into the screen planes; it is not replaced\"}}}\n",
            MARGIN, sheets.s ? sheets.s : "", reflevels.s ? reflevels.s : "");
     {
-        char p[800], t[800];
+        char p[800];
         out_path(p, sizeof p, "index.json");
-        snprintf(t, sizeof t, "%s.tmp", p);
-        write_file(t, idx.s, idx.n);
-#ifdef _WIN32
-        MoveFileExA(t, p, MOVEFILE_REPLACE_EXISTING);
-#endif
+        if (!write_file(p, idx.s, idx.n)) {
+            say("FAILED writing index.json");
+            return 0;
+        }
     }
     say("done: %s", out_dir);
     return 1;
@@ -1572,60 +1569,72 @@ int dump_original(const char *game_dir, const char *out_dir, void (*progress)(co
 typedef struct {
     char game[700], out[700];
 } DumpJob;
-static volatile LONG job_done = 0, dj_ok = 0;
+static int job_done = 0, dj_ok = 0;
 static char job_status[200];
-static CRITICAL_SECTION job_lock;
-static int job_lock_ready = 0;
+static PortMutex *job_lock;
 static void job_say(const char *s) {
-    EnterCriticalSection(&job_lock);
+    port_mutex_lock(job_lock);
     snprintf(job_status, sizeof job_status, "%s", s);
-    LeaveCriticalSection(&job_lock);
+    port_mutex_unlock(job_lock);
 }
 void core_forget_host(void);
 void core_reset(void);
 /* The thread of the background job. */
-static DWORD WINAPI dump_thread(LPVOID p) {
+static void *dump_thread(void *p) {
     DumpJob *j = (DumpJob *)p;
     int ok = dump_original(j->game, j->out, job_say);
     free(j);
     /* the core's fibers belong to this thread: the emulation thread creates its own */
     core_reset();
     core_forget_host();
+    port_mutex_lock(job_lock);
     dj_ok = ok;
     job_done = 1;
-    return 0;
+    port_mutex_unlock(job_lock);
+    return NULL;
 }
 /* Starts the dump in a thread with a large stack (the decoding uses big static buffers). Returns 0 if it could not
  * start. */
 int dump_begin(const char *game_dir, const char *out_dir) {
-    if (!job_lock_ready) {
-        InitializeCriticalSection(&job_lock);
-        job_lock_ready = 1;
-    }
+    if (!job_lock)
+        job_lock = port_mutex_new();
+    if (!job_lock)
+        return 0;
     DumpJob *j = (DumpJob *)calloc(1, sizeof *j);
+    if (!j)
+        return 0;
     snprintf(j->game, sizeof j->game, "%s", game_dir);
     snprintf(j->out, sizeof j->out, "%s", out_dir);
+    port_mutex_lock(job_lock);
     job_done = 0;
     dj_ok = 0;
-    HANDLE h = CreateThread(NULL, 64u << 20, dump_thread, j, 0, NULL);
-    if (!h) {
+    port_mutex_unlock(job_lock);
+    if (!port_thread_start_stack(dump_thread, j, NULL, 64u << 20)) {
         free(j);
         return 0;
     }
-    CloseHandle(h);
     return 1;
 }
 /* Has the job finished? *ok = whether it succeeded. */
 int dump_finished(int *ok) {
-    if (!job_done)
+    int done, result;
+    if (!job_lock)
         return 0;
-    if (ok)
-        *ok = (int)dj_ok;
-    return 1;
+    port_mutex_lock(job_lock);
+    done = job_done;
+    result = dj_ok;
+    port_mutex_unlock(job_lock);
+    if (done && ok)
+        *ok = result;
+    return done;
 }
 /* The last progress message of the job. */
 void dump_status(char *out, size_t n) {
-    EnterCriticalSection(&job_lock);
+    if (!job_lock) {
+        snprintf(out, n, "%s", "");
+        return;
+    }
+    port_mutex_lock(job_lock);
     snprintf(out, n, "%s", job_status);
-    LeaveCriticalSection(&job_lock);
+    port_mutex_unlock(job_lock);
 }

@@ -7,6 +7,7 @@
  * closes and at exit, but never during an automatic test (DOW_TEST).
  */
 #include "app.h"
+#include "port.h"
 
 /* ---- the objects of the running program ---- */
 Presenter *presenter;
@@ -52,11 +53,22 @@ double env_d(const char *name, double def) {
 /* The folders and files of the program, all relative to the executable (assets can be moved with DOW_ASSETS_DIR). */
 void set_paths(void) {
     snprintf(app_dir_path, sizeof app_dir_path, "%s", app_dir());
-    snprintf(options_path, sizeof options_path, "%s/options.json", app_dir_path);
     snprintf(defaults_path, sizeof defaults_path, "%s/default.json", app_dir_path);
-    snprintf(legacy_options_path, sizeof legacy_options_path, "%s/opciones.json", app_dir_path);
     snprintf(music_root, sizeof music_root, "%s/music", app_dir_path);
-    snprintf(save_dir, sizeof save_dir, "%s/saves", app_dir_path);
+    const char *user_dir = getenv("DOW_USER_DIR");
+    if (user_dir && user_dir[0]) {
+        snprintf(options_path, sizeof options_path, "%s/options.json", user_dir);
+        snprintf(legacy_options_path, sizeof legacy_options_path, "%s/opciones.json", user_dir);
+        snprintf(save_dir, sizeof save_dir, "%s/saves", user_dir);
+        if (!dir_exists(user_dir) && !port_mkdir(user_dir))
+            host_log("Could not create user data folder: %s", user_dir);
+        if (!dir_exists(save_dir) && !port_mkdir(save_dir))
+            host_log("Could not create save folder: %s", save_dir);
+    } else {
+        snprintf(options_path, sizeof options_path, "%s/options.json", app_dir_path);
+        snprintf(legacy_options_path, sizeof legacy_options_path, "%s/opciones.json", app_dir_path);
+        snprintf(save_dir, sizeof save_dir, "%s/saves", app_dir_path);
+    }
     const char *ad = getenv("DOW_ASSETS_DIR");
     if (ad)
         snprintf(assets_root, sizeof assets_root, "%s", ad);
@@ -64,12 +76,17 @@ void set_paths(void) {
         snprintf(assets_root, sizeof assets_root, "%s/assets", app_dir_path);
 }
 
-/* The original game file FILES/DOW must be in the "data" folder next to the executable. */
+/* Selects the original hard-disk data file or a supported disk image in the "original" folder. */
 int find_game_dir(void) {
-    char p[800];
-    snprintf(p, sizeof p, "%s/data/FILES/DOW", app_dir_path);
-    if (file_exists(p))
-        snprintf(game_data_dir, sizeof game_data_dir, "%s/data", app_dir_path);
+    char data_dir[800];
+    char original_dir[800];
+    snprintf(data_dir, sizeof data_dir, "%s/data", app_dir_path);
+    const char *od = getenv("DOW_ORIGINAL_DIR");
+    snprintf(original_dir, sizeof original_dir, "%s", od && od[0] ? od : "");
+    if (!original_dir[0])
+        snprintf(original_dir, sizeof original_dir, "%s/original", app_dir_path);
+    if (game_data_init(original_dir))
+        snprintf(game_data_dir, sizeof game_data_dir, "%s", data_dir);
     else
         game_data_dir[0] = 0;
     return game_data_dir[0] != 0;

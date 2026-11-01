@@ -15,6 +15,10 @@
  * code that builds the menu from all of them (menu_build).
  */
 #include "app.h"
+#ifndef _WIN32
+#include <sys/stat.h>
+#include <time.h>
+#endif
 
 /* ================================================================================================ Game tab */
 
@@ -55,7 +59,18 @@ static void slot_labels(void) {
             trf(slot_lbl[n - 1], 64, "val.slot.date", n, lt.wDay, lt.wMonth, lt.wHour, lt.wMinute);
         } else
 #endif
+#ifndef _WIN32
+        {
+            struct stat st;
+            struct tm lt;
+            if (stat(p, &st) == 0 && localtime_r(&st.st_mtime, &lt))
+                trf(slot_lbl[n - 1], 64, "val.slot.date", n, lt.tm_mday, lt.tm_mon + 1, lt.tm_hour, lt.tm_min);
+            else
+                trf(slot_lbl[n - 1], 64, "val.slot.empty", n);
+        }
+#else
             trf(slot_lbl[n - 1], 64, "val.slot.empty", n);
+#endif
     }
 }
 static int sl_nch(void) {
@@ -641,7 +656,15 @@ static void add_image(const char *path) {
     MItem it;
     memset(&it, 0, sizeof it);
     it.kind = MK_IMAGE;
+#ifdef _WIN32
     it.path = _strdup(path);
+#else
+    it.path = strdup(path);
+#endif
+    if (!it.path) {
+        host_log("Could not allocate menu image path");
+        return;
+    }
     menu_add(menu_cur, &it);
 }
 
@@ -736,6 +759,18 @@ void menu_build(int have_audio, int have_gl, int have_pack) {
     add_tab("tab.system", "tab.system.hint");
     add_choice("menu.language", "menu.language.hint", lg_nch, lg_txt, lg_get, lg_set);
     add_action("menu.restore_default_options", "menu.restore_default_options.hint", act_restore);
+    add_sep("sep.build_info", 0);
+#ifdef _WIN32
+    add_sep("system.build.target.windows", 1);
+#else
+    add_sep("system.build.target.linux", 1);
+#endif
+    add_sep("system.build.shared", 1);
+    add_sep("system.build.windows.video", 1);
+    add_sep("system.build.windows.input_audio", 1);
+    add_sep("system.build.linux.io", 1);
+    add_sep("system.build.linux.runtime", 1);
+    add_sep("system.build.libraries", 1);
     add_sep("sep.credits", 0);
     add_sep("Claude Sonnet 5.5 & VooD", 1);
     add_sep("", 0);

@@ -80,7 +80,7 @@ static void key_in_menu(const VEvent *ev) {
     else if (vk == VK_NEXT)
         menu_nav(menu_cur, "tabnext");
     else if (vk == VK_TAB)
-        menu_nav(menu_cur, (GetKeyState(VK_SHIFT) & 0x8000) ? "tabprev" : "tabnext");
+        menu_nav(menu_cur, (ev->mods & 1) ? "tabprev" : "tabnext");
     else if (vk == VK_UP)
         menu_nav(menu_cur, "up");
     else if (vk == VK_DOWN)

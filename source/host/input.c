@@ -12,9 +12,11 @@
 #include "cfg.h"
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__linux__)
+#include <SDL.h>
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__linux__)
 /* ---- teclas redefinibles ---- */
 int key_bind[KA_COUNT];
 static const struct {
@@ -155,10 +157,12 @@ void key_name(int vk, char *out, size_t n) {
         return;
     }
     char b[64] = "";
+#ifdef _WIN32
     UINT sc = MapVirtualKeyA((UINT)vk, MAPVK_VK_TO_VSC);
     if (sc && GetKeyNameTextA((LONG)(sc << 16), b, sizeof b) > 0)
         snprintf(out, n, "%s", b);
     else
+#endif
         snprintf(out, n, "Key %d", vk);
 }
 int kbd_scancode(int vk) {
@@ -374,7 +378,10 @@ void input_cfg_save(void) {
     }
 }
 
+static int n_connected = 0;
+
 /* ---- XInput (carga dinamica) ---- */
+#ifdef _WIN32
 typedef struct {
     WORD wButtons;
     BYTE bLeftTrigger, bRightTrigger;
@@ -389,8 +396,6 @@ static PFN_XGetState xinput_get_state = NULL;
 static int xinput_tried = 0;
 static int pad_connected[4];
 static double pad_last_poll[4];
-static int n_connected = 0;
-
 /* ---- XInput (loaded when first used) ---- */
 /* Right stick -> one of 8 directions (45-degree sectors, so the diagonals are as easy to hit as the main directions); 0
  * inside the dead zone. J_UP is stick up (Y positive). */
@@ -492,6 +497,152 @@ int pads_read(PadRead out[2]) {
     }
     return idx;
 }
+#elif defined(__linux__)
+#define SDL_DPAD_UP    0x01
+#define SDL_DPAD_DOWN  0x02
+#define SDL_DPAD_LEFT  0x04
+#define SDL_DPAD_RIGHT 0x08
+static SDL_GameController *controllers[4];
+static SDL_JoystickID controller_ids[4] = {-1, -1, -1, -1};
+
+static int stick_dir8(int x, int y) {
+    const float dz = 0.40f * 32768.0f;
+    float fx = (float)x, fy = (float)y;
+    if (fx * fx + fy * fy < dz * dz)
+        return 0;
+    float ax = fx < 0 ? -fx : fx, ay = fy < 0 ? -fy : fy;
+    int horizontal = ay < 0.41421356f * ax, vertical = ax < 0.41421356f * ay, result = 0;
+    if (!vertical)
+        result |= fx < 0 ? J_LEFT : J_RIGHT;
+    if (!horizontal)
+        result |= fy < 0 ? J_DOWN : J_UP;
+    return result;
+}
+
+int pads_count(void) {
+    return n_connected;
+}
+void pads_names(char *out, size_t n) {
+    snprintf(out, n, "%d", n_connected);
+}
+
+static int controller_buttons(SDL_GameController *controller, int *dpad) {
+    static const struct {
+        SDL_GameControllerButton button;
+        int mask;
+    } map[] = {{SDL_CONTROLLER_BUTTON_A, XB_A},
+               {SDL_CONTROLLER_BUTTON_B, XB_B},
+               {SDL_CONTROLLER_BUTTON_X, XB_X},
+               {SDL_CONTROLLER_BUTTON_Y, XB_Y},
+               {SDL_CONTROLLER_BUTTON_LEFTSHOULDER, XB_LB},
+               {SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, XB_RB},
+               {SDL_CONTROLLER_BUTTON_BACK, XB_BACK},
+               {SDL_CONTROLLER_BUTTON_START, XB_START},
+               {SDL_CONTROLLER_BUTTON_LEFTSTICK, XB_L3},
+               {SDL_CONTROLLER_BUTTON_RIGHTSTICK, XB_R3}};
+    int raw = 0;
+    for (size_t i = 0; i < sizeof map / sizeof map[0]; i++)
+        if (SDL_GameControllerGetButton(controller, map[i].button))
+            raw |= map[i].mask;
+    *dpad = 0;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_UP))
+        *dpad |= SDL_DPAD_UP;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))
+        *dpad |= SDL_DPAD_DOWN;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))
+        *dpad |= SDL_DPAD_LEFT;
+    if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))
+        *dpad |= SDL_DPAD_RIGHT;
+    if (SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) > 9830)
+        raw |= PB_LT;
+    if (SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) > 9830)
+        raw |= PB_RT;
+    return raw;
+}
+
+int pads_read(PadRead out[2]) {
+    SDL_GameControllerUpdate();
+    for (int slot = 0; slot < 4; slot++) {
+        if (controllers[slot] && !SDL_GameControllerGetAttached(controllers[slot])) {
+            SDL_GameControllerClose(controllers[slot]);
+            controllers[slot] = NULL;
+            controller_ids[slot] = -1;
+        }
+    }
+    int devices = SDL_NumJoysticks();
+    for (int device = 0; device < devices; device++) {
+        if (!SDL_IsGameController(device))
+            continue;
+        SDL_JoystickID id = SDL_JoystickGetDeviceInstanceID(device);
+        int known = 0;
+        for (int slot = 0; slot < 4; slot++)
+            if (controller_ids[slot] == id)
+                known = 1;
+        if (known)
+            continue;
+        for (int slot = 0; slot < 4; slot++)
+            if (!controllers[slot]) {
+                controllers[slot] = SDL_GameControllerOpen(device);
+                if (controllers[slot]) {
+                    controller_ids[slot] = id;
+                    break;
+                }
+            }
+    }
+
+    int count = 0, index = 0;
+    n_connected = 0;
+    for (int slot = 0; slot < 4; slot++) {
+        SDL_GameController *controller = controllers[slot];
+        if (!controller || !SDL_GameControllerGetAttached(controller))
+            continue;
+        n_connected++;
+        if (index >= 2)
+            continue;
+        int dpad = 0, raw = controller_buttons(controller, &dpad);
+        int lx = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+        int ly = -SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTY);
+        int rx = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTX);
+        int ry = -SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_RIGHTY);
+        const int dead_zone = (int)(0.35f * 32768.0f);
+        int st = 0;
+        if ((dpad & SDL_DPAD_UP) || ly > dead_zone)
+            st |= J_UP;
+        if ((dpad & SDL_DPAD_DOWN) || ly < -dead_zone)
+            st |= J_DOWN;
+        if ((dpad & SDL_DPAD_LEFT) || lx < -dead_zone)
+            st |= J_LEFT;
+        if ((dpad & SDL_DPAD_RIGHT) || lx > dead_zone)
+            st |= J_RIGHT;
+        if ((pad_bind[PBA_FIRE] && (raw & pad_bind[PBA_FIRE])) ||
+            (pad_bind[PBA_FIRE2] && (raw & pad_bind[PBA_FIRE2])))
+            st |= J_FIRE;
+        if ((st & J_UP) && (st & J_DOWN))
+            st &= ~(J_UP | J_DOWN);
+        if ((st & J_LEFT) && (st & J_RIGHT))
+            st &= ~(J_LEFT | J_RIGHT);
+        PadRead *result = &out[index++];
+        result->aim = pad_dual_stick ? stick_dir8(rx, ry) : 0;
+        result->st = st;
+        result->raw = raw;
+        result->acts = 0;
+        result->wnext = pad_bind[PBA_WNEXT] && (raw & pad_bind[PBA_WNEXT]) ? 1 : 0;
+        result->hold = pad_bind[PBA_HOLD] && (raw & pad_bind[PBA_HOLD]) ? 1 : 0;
+        if (pad_bind[PBA_ROCKET] && (raw & pad_bind[PBA_ROCKET]))
+            result->acts |= PA_ROCKET;
+        if (pad_bind[PBA_GRENADE] && (raw & pad_bind[PBA_GRENADE]))
+            result->acts |= PA_GRENADE;
+        if (pad_bind[PBA_WPREV] && (raw & pad_bind[PBA_WPREV]))
+            result->acts |= PA_WBACK;
+        if (pad_bind[PBA_MENU] && (raw & pad_bind[PBA_MENU]))
+            result->acts |= PA_MENU;
+        if (pad_bind[PBA_EXIT] && (raw & pad_bind[PBA_EXIT]))
+            result->acts |= PA_EXIT;
+        count++;
+    }
+    return count;
+}
+#endif
 #else
 int key_bind[KA_COUNT];
 int pad_bind[PBA_COUNT];

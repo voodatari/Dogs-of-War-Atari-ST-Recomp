@@ -58,4 +58,6 @@ void menu_status(Menu *m, const char *text);
 /* string that changes when the menu must be repainted */
 int menu_signature(Menu *m, int w, int h, char *out, size_t n);
 uint8_t *menu_draw(Menu *m, int w, int h); /* RGBA (malloc) w*h */
+/* Pre-renders the controls tab so its controller image is cached before the first visit. */
+void menu_warmup(Menu *m, int w, int h);
 #endif

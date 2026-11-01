@@ -11,6 +11,7 @@
 #include "scene.h"
 #include "gfxpack.h"
 #include "render.h"
+#include "port.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -344,16 +345,14 @@ static void build(LRGB *e, Level *L) {
     e->ready = 1;
 }
 
-#ifdef _WIN32
 /* Thread entry of a background build. */
-static DWORD WINAPI build_thread(LPVOID p) {
+static void *build_thread(void *p) {
     BuildJob *j = (BuildJob *)p;
     build(j->e, j->L);
     free(j);
     gfxpack_builders(-1);
-    return 0;
+    return NULL;
 }
-#endif
 
 /* The RGB background of level `id` for a palette at scale S, or NULL if it is not ready (the build is started in a
  * thread and later calls find it). *rows_px = its height in pixels. */
@@ -398,23 +397,16 @@ const uint8_t *level_rgb(uint32_t id, const uint8_t *pal32, int S, int *rows_px)
     e->gen = pack_gen;
     e->stamp = ++lr_stamp;
     BuildJob *j = (BuildJob *)malloc(sizeof *j);
+    if (!j)
+        return NULL;
     j->e = e;
     j->L = L;
     gfxpack_builders(1);
-#ifdef _WIN32
-    HANDLE h = CreateThread(NULL, 0, build_thread, j, 0, NULL);
-    if (h)
-        CloseHandle(h);
-    else {
+    if (!port_thread_start(build_thread, j, NULL)) {
         build(e, L);
         free(j);
         gfxpack_builders(-1);
     }
-#else
-    build(e, L);
-    free(j);
-    gfxpack_builders(-1);
-#endif
     return NULL;
 }
 

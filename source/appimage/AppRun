@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+
+APPDIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+user_dir="${DOW_USER_DIR:-$config_home/dogs-of-war}"
+user_data="${XDG_DATA_HOME:-$HOME/.local/share}/dogs-of-war"
+assets_dir="${DOW_ASSETS_DIR:-$user_data/assets}"
+
+mkdir -p "$user_dir/saves" "$assets_dir"
+if [ ! -e "$assets_dir/mod" ]; then
+    cp -a "$APPDIR/assets/mod" "$assets_dir/mod"
+fi
+
+if [ -z "${DOW_ORIGINAL_DIR:-}" ]; then
+    if [ -f "$APPDIR/original/DOW" ]; then
+        DOW_ORIGINAL_DIR="$APPDIR/original"
+    else
+        DOW_ORIGINAL_DIR="$user_data/original"
+        mkdir -p "$DOW_ORIGINAL_DIR"
+    fi
+fi
+
+export DOW_USER_DIR="$user_dir"
+export DOW_ASSETS_DIR="$assets_dir"
+export DOW_ORIGINAL_DIR
+export LD_LIBRARY_PATH="$APPDIR/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+exec "$APPDIR/dowport" "$@"

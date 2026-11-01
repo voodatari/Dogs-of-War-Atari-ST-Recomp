@@ -71,7 +71,7 @@ extern char app_dir_path[600];        /* folder of dowport.exe */
 extern char options_path[700];        /* options.json: your options, written when the menu closes */
 extern char defaults_path[700];       /* default.json: factory options */
 extern char legacy_options_path[700]; /* opciones.json: options file of earlier versions */
-extern char game_data_dir[600];       /* data: contains FILES/DOW, the original game file, and languages/ */
+extern char game_data_dir[600];       /* data: contains game support files and languages/ */
 extern char assets_root[700];         /* assets: graphics dump and graphics packs */
 extern char save_dir[700];            /* saves: the three save slots */
 extern char music_root[700];          /* music: the music packs */
@@ -79,7 +79,7 @@ extern char pack_from_cmdline[64];    /* graphics pack requested with --pack (or
 
 /* ---- app.c ---- */
 double env_d(const char *name, double def);   /* a number from the environment */
-int find_game_dir(void);                      /* looks for data/FILES/DOW; 0 if it is not there */
+int find_game_dir(void);                      /* selects supported original data under original/; 0 if unavailable */
 void set_paths(void);                         /* fills the folders above from the executable's folder */
 void load_options(int fix_cli, int no_sound); /* reads options.json (or the older files) into the variables above */
 void save_options(void);                      /* writes them to options.json (not during automatic tests) */

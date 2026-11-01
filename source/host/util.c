@@ -1,8 +1,15 @@
 /* util.c - host utilities (Windows): time, log, paths and files. */
 #include "host.h"
+#include "port.h"
 #include <stdarg.h>
+#include <limits.h>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <errno.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 #endif
 
 /* Seconds on a high-resolution monotonic clock. */
@@ -15,7 +22,10 @@ double now_s(void) {
     QueryPerformanceCounter(&c);
     return (double)c.QuadPart / (double)f.QuadPart;
 #else
-    return 0.0;
+    struct timespec t;
+    if (clock_gettime(CLOCK_MONOTONIC, &t) != 0)
+        return 0.0;
+    return (double)t.tv_sec + (double)t.tv_nsec / 1000000000.0;
 #endif
 }
 
@@ -56,8 +66,12 @@ int wait_event_ms(void *ev, double ms) {
     Sleep((DWORD)(ms + 0.5));
     return 0;
 #else
-    (void)ev;
-    (void)ms;
+    if (ms <= 0)
+        return ev ? port_event_wait((PortEvent *)ev, 0) : 0;
+    unsigned timeout = ms >= (double)UINT_MAX ? UINT_MAX : (unsigned)(ms + 0.999);
+    if (ev)
+        return port_event_wait((PortEvent *)ev, timeout);
+    sleep_ms(ms);
     return 0;
 #endif
 }
@@ -69,6 +83,14 @@ void sleep_ms(double ms) {
         return;
     }
     wait_event_ms(NULL, ms);
+#else
+    if (ms <= 0)
+        return;
+    struct timespec req;
+    req.tv_sec = (time_t)(ms / 1000.0);
+    req.tv_nsec = (long)((ms - (double)req.tv_sec * 1000.0) * 1000000.0);
+    while (nanosleep(&req, &req) != 0 && errno == EINTR) {
+    }
 #endif
 }
 
@@ -82,7 +104,8 @@ void host_log_file(const char *fmt, ...) {
     va_end(ap);
     if (!logf_) {
         char p[600];
-        path_join(p, sizeof p, app_dir(), "error.log");
+        const char *user_dir = getenv("DOW_USER_DIR");
+        path_join(p, sizeof p, user_dir && user_dir[0] ? user_dir : app_dir(), "error.log");
         logf_ = fopen(p, "a");
     }
     if (logf_) {
@@ -101,7 +124,8 @@ void host_log(const char *fmt, ...) {
     fflush(stderr);
     if (!logf_) {
         char p[600];
-        path_join(p, sizeof p, app_dir(), "error.log");
+        const char *user_dir = getenv("DOW_USER_DIR");
+        path_join(p, sizeof p, user_dir && user_dir[0] ? user_dir : app_dir(), "error.log");
         logf_ = fopen(p, "a");
     }
     if (logf_) {
@@ -123,6 +147,14 @@ const char *app_dir(void) {
             n--;
         p[n] = 0;
         snprintf(dir, sizeof dir, "%s", p);
+#else
+        ssize_t n = readlink("/proc/self/exe", dir, sizeof dir - 1);
+        if (n > 0) {
+            dir[n] = 0;
+            char *slash = strrchr(dir, '/');
+            if (slash)
+                *slash = 0;
+        }
 #endif
         for (char *c = dir; *c; c++)
             if (*c == 0x5C)
@@ -142,7 +174,8 @@ int file_exists(const char *p) {
     DWORD a = GetFileAttributesA(p);
     return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
 #else
-    return 0;
+    struct stat st;
+    return stat(p, &st) == 0 && S_ISREG(st.st_mode);
 #endif
 }
 /* Is there a folder at that path? */
@@ -151,7 +184,8 @@ int dir_exists(const char *p) {
     DWORD a = GetFileAttributesA(p);
     return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY);
 #else
-    return 0;
+    struct stat st;
+    return stat(p, &st) == 0 && S_ISDIR(st.st_mode);
 #endif
 }
 

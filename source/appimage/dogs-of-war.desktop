@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Dogs of War
+Comment=Native Linux port of Dogs of War
+Exec=AppRun
+Icon=dogs-of-war
+Terminal=false
+Type=Application
+Categories=Game;ActionGame;
+StartupWMClass=dowport

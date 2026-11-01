@@ -4,6 +4,9 @@
 #ifndef INPUT_H
 #define INPUT_H
 #include "host.h"
+#ifndef _WIN32
+#include "vk.h"
+#endif
 
 #define J_UP    1
 #define J_DOWN  2

@@ -12,6 +12,7 @@
  * While the thread is active, the window loop does not send the joystick, hold or aim state itself.
  */
 #include "app.h"
+#include "port.h"
 
 /* True when the thread must be the one that reads the inputs. Automatic tests drive the inputs themselves, so they
  * only use it when DOW_FASTIN_TEST is set. */
@@ -78,10 +79,66 @@ static DWORD WINAPI fast_input_thread(LPVOID arg) {
     }
     return 0;
 }
+#elif defined(__linux__)
+static void *fast_input_thread(void *arg) {
+    (void)arg;
+    int last_joy1 = -1, last_joy0 = -1, last_hold[2] = {-1, -1}, last_aim[2] = {-1, -1};
+    while (app_running) {
+        if (!fast_input_active() || menu_open_flag || !input_ready) {
+            last_joy1 = last_joy0 = -1;
+            last_hold[0] = last_hold[1] = -1;
+            last_aim[0] = last_aim[1] = -1;
+            sleep_ms(fast_input_active() ? 1 : 20);
+            continue;
+        }
+        PadRead pad[2];
+        int npads = pads_read(pad), kbd = 0;
+        if (getenv("DOW_FASTIN_TEST") || video_has_focus()) {
+            int keys[16], nkeys = kbd_joy_keys(keys);
+            for (int i = 0; i < nkeys; i++)
+                if (video_key_down(keys[i]) && !key_held[keys[i] & 511])
+                    kbd |= kbd_joy_bit(keys[i]);
+        }
+        int st[2] = {0, 0};
+        for (int i = 0; i < npads && i < 2; i++) {
+            st[i] = pad[i].st;
+            if (pad_fire_blocked[i] && (st[i] & J_FIRE))
+                st[i] &= ~J_FIRE;
+        }
+        int joy1 = kbd | st[0], joy0 = st[1];
+        for (int i = 0; i < 2; i++) {
+            int hold = i < npads ? pad[i].hold : 0;
+            if (hold != last_hold[i]) {
+                last_hold[i] = hold;
+                emu_post(EV_HOLD, i, hold);
+            }
+            int aim = pad_aim_code(pad, npads, i);
+            if (aim != last_aim[i]) {
+                last_aim[i] = aim;
+                emu_post(EV_AIM, i, aim);
+            }
+        }
+        if (joy1 != last_joy1) {
+            last_joy1 = joy1;
+            emu_post(EV_JOY, joy1, 0);
+            if (getenv("DOW_FASTIN_LOG"))
+                host_log_file("fastin j1=%02X t=%.4f", joy1, now_s());
+        }
+        if (joy0 != last_joy0) {
+            last_joy0 = joy0;
+            emu_post(EV_JOY0, joy0, 0);
+        }
+        sleep_ms(1);
+    }
+    return NULL;
+}
 #endif
 
 void fast_input_start(void) {
 #ifdef _WIN32
     CloseHandle(CreateThread(NULL, 0, fast_input_thread, NULL, 0, NULL));
+#elif defined(__linux__)
+    if (!port_thread_start(fast_input_thread, NULL, NULL))
+        host_log("Could not start the fast-input thread");
 #endif
 }

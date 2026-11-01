@@ -23,9 +23,10 @@ if ($Clean -and (Test-Path $obj)) { Remove-Item -Recurse -Force $obj }
 New-Item -ItemType Directory -Force $obj | Out-Null
 
 function Q([string]$x) { if ($x -match '\s') { '"' + $x + '"' } else { $x } }
-$flags = @('-c', '-O2', '-w', '-DHOST_DIRECT', '-I', "$root\runtime", '-I', "$root\generated", '-I', "$root\host")
-$sources = @(Get-ChildItem "$root\generated\*.c") + @(Get-ChildItem "$root\runtime\*.c") + @(Get-ChildItem "$root\host\*.c")
-$headers = @(Get-ChildItem "$root\generated\*.h", "$root\runtime\*.h", "$root\host\*.h")
+$flags = @('-c', '-O2', '-w', '-DHOST_DIRECT', '-I', "$root\runtime", '-I', "$root\generated", '-I', "$root\host", '-I', "$root\port", '-I', "$root\thirdparty")
+$sources = @(Get-ChildItem "$root\generated\*.c") + @(Get-ChildItem "$root\runtime\*.c") + @(Get-ChildItem "$root\host\*.c") +
+    @(Get-ChildItem "$root\port\*.c") + @(Get-Item "$root\thirdparty\stb_vorbis.c")
+$headers = @(Get-ChildItem "$root\generated\*.h", "$root\runtime\*.h", "$root\host\*.h", "$root\port\*.h", "$root\thirdparty\*.h")
 $newest = ($headers | Measure-Object LastWriteTimeUtc -Maximum).Maximum
 $t0 = Get-Date
 
@@ -54,8 +55,11 @@ if ($failed) { exit 1 }
 
 # --- link
 New-Item -ItemType Directory -Force $Out | Out-Null
-$libs = @('-lopengl32', '-lgdi32', '-luser32', '-lwinmm', '-lole32', '-lxinput1_4', '-lmfplat', '-lmfreadwrite', '-lmfuuid', '-lshell32', '-lshlwapi', '-lpropsys', '-ladvapi32', '-loleaut32', '-luuid')
-# the icon of the program: host\ico.png is converted to a multi-size .ico (PNG entries, transparency kept) and compiled as a Windows resource: zig cc compiles the .rc itself,
+# Media Foundation was removed in the portable fork (mp3.c decodes with vendored open-source code: minimp3 +
+# stb_vorbis + a small WAV reader), so its libraries are gone; shell32 / shlwapi / propsys / advapi32 / oleaut32 /
+# uuid have no more callers.
+$libs = @('-lopengl32', '-lgdi32', '-luser32', '-lwinmm', '-lole32', '-lxinput1_4')
+# the icon of the program: host\ico.png is converted to a multi-size .ico (PNG entries, transparency kept) and compiled as a Windows resource: zig rc creates the COFF object,
 # with MinGW the resource compiler windres is used; without either the program just has no icon
 $png = Join-Path $root 'host\ico.png'; $res = @()
 if (Test-Path $png) {
@@ -78,8 +82,35 @@ if (Test-Path $png) {
         $w.Close(); $fs.Close()
     }
     '1 ICON "dowport.ico"' | Set-Content -Path $rc -Encoding ascii
-    if ($ccExe -match 'zig') { $res = @($rc) }
-    elseif (Get-Command windres -ErrorAction SilentlyContinue) { $ro = Join-Path $obj 'dowport_rc.o'; Push-Location $obj; & windres 'dowport.rc' -O coff -o $ro; Pop-Location; if ($LASTEXITCODE -eq 0) { $res = @($ro) } }
+    $ro = Join-Path $obj 'dowport_rc.o'
+    if ($cc -match 'zig') {
+        $rcArgs = @()
+        if ($ccArgs0 -contains 'cc') {
+            $rcArgs = [string[]]$ccArgs0.Clone()
+            $rcArgs[$rcArgs.Count - 1] = 'rc'
+        } else {
+            $rcArgs = @('rc')
+        }
+        Push-Location $obj
+        try {
+            & $ccExe @rcArgs '/fo' 'dowport_rc.o' '/:output-format' 'coff' 'dowport.rc'
+            if ($LASTEXITCODE -ne 0) { throw 'Zig resource compilation failed.' }
+            $res = @($ro)
+        } finally {
+            Pop-Location
+        }
+    } elseif (Get-Command windres -ErrorAction SilentlyContinue) {
+        Push-Location $obj
+        try {
+            & windres 'dowport.rc' -O coff -o 'dowport_rc.o'
+            if ($LASTEXITCODE -ne 0) { throw 'windres resource compilation failed.' }
+            $res = @($ro)
+        } finally {
+            Pop-Location
+        }
+    } else {
+        Write-Warning 'No resource compiler found; the executable will not have an icon.'
+    }
 }
 $link = ($ccArgs0 + @('-O2', '-o', $exe) + $objs + $res + $libs + @('-mwindows')) | ForEach-Object { Q $_ }
 $p = Start-Process -FilePath $ccExe -ArgumentList $link -NoNewWindow -PassThru; $null = $p.Handle; $p.WaitForExit()
@@ -87,3 +118,4 @@ if ($p.ExitCode -ne 0) { Write-Host 'link failed'; exit 1 }
 Get-ChildItem $Out -Filter 'dispatch*.lib' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
 Remove-Item (Join-Path $Out 'dowport.pdb') -ErrorAction SilentlyContinue
 Write-Host ("compiled {0} ({1} files) in {2:N1} s" -f $exe, $todo.Count, ((Get-Date) - $t0).TotalSeconds)
+if ($res.Count) { Write-Host 'embedded program icon' }

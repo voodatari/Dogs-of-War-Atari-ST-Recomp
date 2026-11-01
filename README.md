@@ -1,25 +1,29 @@
-# Dogs of War Atari ST Recomp for Windows
+# Dogs of War – Windows/Linux port at 60 fps
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=bngajk3MZKU"><img src="docs/screenshot.jpg" alt="Dogs of War running with the port / Dogs of War funcionando con el port" width="480"></a><br>
   <a href="https://www.youtube.com/watch?v=bngajk3MZKU">Gameplay video / Vídeo de gameplay</a>
 </p>
 
-> **Where things are** — `source/`: the complete C source (the game translated to C in `source/generated/`, the machine in `source/runtime/`, the Windows program in `source/host/`; build it with `source/build.bat`, see `source/README.md`).
-> The ready-to-run program is on the **[Releases](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp-for-Windows/releases)** page: a zip with `dowport.exe`, `data/languages/`, `shaders/`, `music/`, `assets/` and `default.json`. The zip already includes the game file `data\FILES\DOW`.
+> **Repository layout** — `source/`: the complete C source (the game translated to C in `source/generated/`, the machine in `source/runtime/`, and the platform backends in `source/host/` and `source/port/`; see `source/README.md` for Windows and Linux builds).
+> `build/`: the ready-to-run files: `dowport.exe` (Windows) or `dowport` (Linux), `original/` (supported game data), `data/` (languages and support files), `shaders/`, `music/`, `assets/mod/` and `default.json`.
 
-*Versión en español a continuación / Spanish version below: [Dogs of War Atari ST Recomp for Windows – Port para Windows a 60 fps](#dogs-of-war-atari-st-recomp-for-windows--port-para-windows-a-60-fps).*
+*Versión en español a continuación / Spanish version below: [Dogs of War – Port para Windows/Linux a 60 fps](#dogs-of-war--port-para-windowslinux-a-60-fps).*
 
-A native Windows port of **Dogs of War** (Atari ST, Elite 1989, Pera Putnik's HAGA version). The game's own 68000 program, translated to C, runs inside a small
+A native Windows and Linux port of **Dogs of War** (Atari ST, Elite 1989, Pera Putnik's HAGA version). The game's own 68000 program, translated to C, runs inside a small
 Atari STE machine and is drawn at your monitor's refresh rate: the game logic runs at 25 Hz and the port **interpolates between its frames**, so movement is smooth at 60 Hz
 (or 144 Hz…) with very low input latency. It is a single self-contained C program.
 
 ## What is this version?
-This is **version 1.1.2** (2026-10-20) of an unofficial, fan-made **native Windows port** of *Dogs of War* (Atari ST, Elite Systems 1989, HAGA version by Pera Putnik); every step that led here is in the [changelog](CHANGELOG.md).
+This is **version 1.2.0** (2026-11-01) of an unofficial, fan-made **native Windows/Linux port** of *Dogs of War* (Atari ST, Elite Systems 1989, HAGA version by Pera Putnik); every step that led here is in the [changelog](CHANGELOG.md).
 
-**What it is.** The game's own 68000 program has been **translated entirely to C**, and it is compiled, together with a small Atari STE machine (mini-TOS, timers, keyboard and joystick, video, YM2149 sound chip) and a Windows program (OpenGL video, mixer, input, menus), into a single `dowport.exe`. The original game logic runs unchanged at its own 25 Hz; the port draws the images in between, so the movement is smooth at 60 Hz, 144 Hz or whatever your monitor does.
+**Cross-platform edition.** MP3, OGG and WAV playback uses bundled decoders, not Windows Media Foundation; `.wma` and `.m4a` are not supported. The menu uses the portable `port/ui2d.c` renderer. Windows uses native Win32/OpenGL, XInput and Windows audio APIs; Linux uses SDL2 for its window, input, game controllers and audio, with OpenGL 3.3 and the same built-in CRT effects and external RetroArch shaders. Linux release packages bundle SDL2 and automatically select an available audio backend. Build requirements and details are in [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
-**What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, no Atari ROM or TOS is needed, and there is no Python, no cache and no snapshot of the original loader. It does not contain the game's data (graphics, levels, text): you provide the original file `data\FILES\DOW`, which is used only as data, and the graphics dump is generated from it the first time the program starts.
+**What it is.** The game's own 68000 program has been **translated entirely to C**, and it is compiled with a small Atari STE machine (mini-TOS, timers, keyboard and joystick, video, YM2149 sound chip) and a native Windows or Linux host into one executable. The original game logic runs unchanged at its own 25 Hz; the port draws the images in between.
+
+**What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, no Atari ROM or TOS is needed, and there is no Python, no cache and no snapshot of the original loader. The game data is kept separate from the program: the Windows ZIP and Linux AppImage releases include an optional `DOW` file, while the other packages require users to provide one of the supported data files in `original/`: `DOW` (reference CRC32 `6703B50F`) or the Replicants disk image (CRC32 `F6E84D7A`). The disk image is read directly; no replacement `DOW` file is created. The graphics dump is generated from the selected source the first time the program starts.
+
+**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **What it adds to the original**
 - Frame interpolation to the refresh rate of your monitor, sub-pixel sprites, and low-latency input and audio.
@@ -46,9 +50,18 @@ This is **version 1.1.2** (2026-10-20) of an unofficial, fan-made **native Windo
 - **Fixes** for stutters and glitches that appear only at high frame rates (all can be switched off).
 
 ## Quick start
-1. The game file `FILES\DOW` must be in the **`data`** folder next to `dowport.exe` (`data\FILES\DOW`); the Release zip already includes it, and if you build from source you copy it there from your original game. It is the only original file needed, and it only provides the game's data; the other files of the disk are not used. If it is missing the program says so and quits.
-2. Run `dowport.exe`. On the first start it prepares, in a few seconds, `assets\original\` (the graphics dump, see [Graphics packs](#graphics-packs)).
+1. For Windows and a standalone Linux build, put one of these data files directly in the existing `original\` / `original/` folder next to the executable. For the Linux AppImage without DOW, use `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`); the AppImage with DOW uses its bundled `original/DOW` by default.
+   - **Hard-disk data:** name it `DOW` (no extension); reference CRC32: `6703B50F`. The file is in the `FILES` folder of the Pera Putnik hard-disk version.
+   - **Replicants disk image:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829,440 bytes). Put it in the `original` folder. The port detects the image by CRC32, so another `.st` filename with that same CRC also works.
+
+   If both files are present, `original/DOW` takes priority. The Replicants image is read directly; the port does not create a replacement `DOW`.
+2. Run `dowport.exe` (Windows) or `./dowport` (Linux). On the first start it prepares, in a few seconds, `assets/original/` (the graphics dump, see [Graphics packs](#graphics-packs)).
 3. Press **Esc** (or the pad's **Start**) for the options menu.
+
+The Linux AppImages and `.tar.xz` packages include SDL2, so the system SDL2 package is not required at runtime.
+SDL selects the available audio backend automatically: desktop Linux normally uses its PulseAudio-compatible
+service (including PipeWire's compatibility layer), while systems without it can use another SDL backend such as
+ALSA. Set `SDL_AUDIODRIVER` only to override SDL's selection.
 
 ## Controls
 Every key and pad button can be redefined (see below); these are the defaults.
@@ -189,7 +202,8 @@ What is always saved is the **map before the current mission** (with the money a
 ## Files and folders
 ```
 dowport.exe          the program
-data\FILES\DOW       the original game file (the game's data)                      — you provide it
+original\DOW         hard-disk data file (reference CRC32 6703B50F)                — or
+original\Dogs of War (1989)(Elite)[cr Replicants][t].st  Replicants disk image (CRC32 F6E84D7A)
 data\languages\      the texts of the menus, one XML file per language (english.xml, spanish.xml)
 default.json         factory options (read when options.json is missing or on "Restore default options")
 options.json         your options (written when the menu closes)
@@ -200,6 +214,9 @@ assets\<pack>\       graphics packs (e.g. assets\mod)
 saves\               save slots (.dows) and crash reports
 error.log            diagnostics: unusual events, audio gaps
 ```
+The paths above describe a Windows or standalone Linux folder. In the Linux AppImage without DOW, put either game-data file in
+`$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`). The AppImage with DOW uses its bundled
+`original/DOW`; set `DOW_ORIGINAL_DIR` before launching it to use another data folder.
 
 ## Configuration reference
 `options.json` is written by the menu. If it does not exist, the options come from `default.json` (or from an older `opciones.json`). Keys that are not in the menu can be edited by hand and take effect at the next start:
@@ -224,7 +241,8 @@ error.log            diagnostics: unusual events, audio gaps
 | `pad_fire`, … | pad buttons by name: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Troubleshooting
-- **"The original game file was not found"**: copy the `DOW` file of your game into `data\FILES\` next to the exe. If it is not the expected version, the port reports that it could not start the game from it.
+- **"No supported game data found"**: for Windows or a standalone Linux build, put `DOW` (reference CRC32 `6703B50F`) or a `.st` image with CRC32 `F6E84D7A` directly in `original\` / `original/`. For the Linux AppImage without DOW, put it in `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`).
+- **No sound on Linux**: leave `SDL_AUDIODRIVER` unset so SDL can select an available backend (normally the desktop's PulseAudio-compatible service, including PipeWire, or ALSA). `error.log` records the selected driver.
 - **Sound crackles or lags**: raise the emulation margin (Page Up) or turn off *Low-latency audio*; `error.log` lists audio gaps.
 - **Judder at 60 Hz**: leave *Frame interpolation* on, or use *Game speed → Match screen refresh* with interpolation off.
 - **A graphics pack does nothing**: it only replaces cells that differ from `assets/original/`; delete that folder to rebuild the dump and check the sheet names and sizes.
@@ -232,41 +250,41 @@ error.log            diagnostics: unusual events, audio gaps
 
 ## How it works
 - **The game**: its 68000 program is translated to C (`source/generated/`, one C function per routine, running as cooperative fibers). If the game ever jumps to an address that is not game code (a corrupted state) the port goes back to a snapshot from a few seconds earlier and logs it (see Troubleshooting).
-- **The machine** (`tos.c`, `runtime/machine.c`): an Atari STE with a mini-TOS (just enough GEMDOS/BIOS/XBIOS for the game), IKBD/ACIA keyboard and joystick, MFP timers and per-scanline palette zones. At every start `boot.c` builds the memory the original loader (`RUNME.TOS` and `HAGA`) leaves when it jumps into the game. All the 68000 code, the loader's included, is already C, so the only original file is `FILES\DOW`, which provides the game's data; the few variables of the loader that the code reads are in the program.
+- **The machine** (`tos.c`, `runtime/machine.c`): an Atari STE with a mini-TOS (just enough GEMDOS/BIOS/XBIOS for the game), IKBD/ACIA keyboard and joystick, MFP timers and per-scanline palette zones. At every start `boot.c` builds the memory the original loader (`RUNME.TOS` and `HAGA`) leaves when it jumps into the game. All the 68000 code, the loader's included, is already C, so the original data source is used only for game data; the few variables of the loader that the code reads are in the program.
 - **Scene capture** (`scene.c`): for every logic frame it records the background (circular scroll buffer), the HUD and every drawn object (enemies, player, bullets, explosions, vehicles…) with its position, and keeps a **sprite atlas**.
 - **Presenter** (`render.c`, `present.c`): draws any instant between two logic frames, with scroll and sprites at intermediate positions, enemy-motion filters and scroll stabilisation.
-- **Output**: `video.c` (Win32 + OpenGL 3.3), `ym.c`, `mixer.c`, `mp3.c` (Windows Media Foundation), `audioout.c` (waveOut / WASAPI), `menu.c` (GDI), `input.c` (XInput), `cfg.c`, `gfxpack.c`, `dump.c`.
+- **Output**: `video.c` (Win32 + OpenGL 3.3), `ym.c`, `mixer.c`, `mp3.c` (vendored minimp3 / stb_vorbis / WAV reader), `audioout.c` (waveOut / WASAPI), `menu.c` (portable `port/ui2d.c`), `input.c` (XInput), `cfg.c`, `gfxpack.c`, `dump.c`.
 - **Verification**: the translation was checked against an independent 68000 emulator, instruction by instruction and frame by frame, over the 12 missions (whole 4 MB of RAM, sound registers and palette).
 
 ## Building from source
-Everything is in `source/` (see `source/README.md`). Install a C compiler (Zig, MinGW-w64 or clang) and run `source\build.bat`; it writes `build\dowport.exe`.
-
-## License
-The code written for this project (the Windows program in `source/host/`, the machine in `source/runtime/`, the build scripts and the documentation) is released under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)).
-`source/generated/` is the game's own program translated to C: it derives from the original game, whose rights remain with its owners. The RetroArch shaders keep their own licences (see *Shaders and licences*), and the game file `data\FILES\DOW`, the music packs and the graphics pack that come in the Release are not covered by this licence either.
+Everything is in `source/` (see `source/README.md`). On Windows, install Zig, MinGW-w64 or Clang and run `source\build.bat`; it writes `build\dowport.exe`. On Debian/Ubuntu Linux, install `build-essential pkg-config libsdl2-dev` and run `bash source/build-linux.sh`; it writes `build/dowport`.
 
 ## Status
-Working: boot from the original files, title, menus, mission map, shop and all missions with 60 fps interpolation. Pending: more object types (other levels and bosses).
+Working: boot from the original files, title, menus, mission map, shop and all 12 missions with 60 fps interpolation on Windows and Linux. Both x64 release builds are available from the [latest release](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/latest).
 
 Credits: Claude Sonnet 5.5 & VooD.
 
 ---
 
-# Dogs of War Atari ST Recomp for Windows – Port para Windows a 60 fps
+# Dogs of War – Port para Windows/Linux a 60 fps
 
-> **Dónde está cada cosa** — `source/`: el código fuente completo en C (el juego traducido a C en `source/generated/`, la máquina en `source/runtime/`, el programa para Windows en `source/host/`; se compila con `source/build.bat`, véase `source/README.md`).
-> El programa listo para ejecutar está en la página de **[Releases](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp-for-Windows/releases)**: un zip con `dowport.exe`, `data/languages/`, `shaders/`, `music/`, `assets/` y `default.json`. El zip ya incluye el fichero del juego `data\FILES\DOW`.
+> **Estructura del repositorio** — `source/`: el código fuente completo en C (el juego traducido a C en `source/generated/`, la máquina en `source/runtime/` y los backends en `source/host/` y `source/port/`; véase `source/README.md` para compilar en Windows y Linux).
+> `build/`: el programa listo para ejecutar: `dowport.exe`, `data/` (el fichero del juego original `FILES/DOW`), `shaders/`, `music/`, `assets/mod/` (pack gráfico) y `default.json`.
 
-Port nativo para Windows de **Dogs of War** (Atari ST, Elite 1989, versión HAGA de Pera Putnik). El programa 68000 del propio juego, traducido a C, se ejecuta dentro de una pequeña
+Port nativo para Windows y Linux de **Dogs of War** (Atari ST, Elite 1989, versión HAGA de Pera Putnik). El programa 68000 del propio juego, traducido a C, se ejecuta dentro de una pequeña
 máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la lógica del juego va a 25 Hz y el port **interpola entre sus fotogramas**, de modo que el movimiento es fluido a 60 Hz
 (o 144 Hz…) con una latencia de entrada muy baja. Es un único programa en C, autocontenido.
 
 ## ¿Qué es esta versión?
-Esta es la **versión 1.1.2** (2026-10-20) de un **port nativo para Windows**, no oficial y hecho por aficionados, de *Dogs of War* (Atari ST, Elite Systems 1989, versión HAGA de Pera Putnik); todos los pasos que llevaron hasta aquí están en el [registro de cambios](CHANGELOG.md).
+Esta es la **versión 1.2.0** (2026-11-01) de un **port nativo para Windows y Linux**, no oficial y hecho por aficionados, de *Dogs of War* (Atari ST, Elite Systems 1989, versión HAGA de Pera Putnik); todos los pasos que llevaron hasta aquí están en el [registro de cambios](CHANGELOG.md).
 
-**Qué es.** El propio programa 68000 del juego se ha **traducido por completo a C**, y se compila, junto con una pequeña máquina Atari STE (mini-TOS, timers, teclado y joystick, vídeo, chip de sonido YM2149) y un programa para Windows (vídeo OpenGL, mezclador, entrada, menús), en un único `dowport.exe`. La lógica original del juego se ejecuta sin cambios a sus 25 Hz; el port dibuja las imágenes intermedias, de modo que el movimiento es fluido a 60 Hz, 144 Hz o lo que dé tu monitor.
+**Edición multiplataforma.** La reproducción de MP3, OGG y WAV usa decodificadores incluidos, no Windows Media Foundation; `.wma` y `.m4a` no están soportados. El menú usa el renderizador portable `port/ui2d.c`. Windows conserva sus backends OpenGL, XInput y audio nativo; Linux usa SDL2 para ventana, entrada, mandos y audio, con OpenGL 3.3 y los mismos efectos CRT y shaders RetroArch externos. Los paquetes Linux incluyen SDL2 y seleccionan automáticamente un backend de audio disponible. Los requisitos y detalles están en [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
-**Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000, no hace falta ninguna ROM ni TOS de Atari, y no hay Python, ni caché, ni instantánea del cargador original. No contiene los datos del juego (gráficos, niveles, texto): tú aportas el fichero original `data\FILES\DOW`, que se usa solo como datos, y el volcado de gráficos se genera a partir de él la primera vez que arranca el programa.
+**Qué es.** El programa 68000 del juego se ha **traducido por completo a C**, y se compila junto con una pequeña máquina Atari STE (mini-TOS, timers, teclado y joystick, vídeo y chip de sonido YM2149) y un host nativo para Windows o Linux en un único ejecutable. La lógica original se ejecuta sin cambios a 25 Hz; el port dibuja las imágenes intermedias.
+
+**Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000, no hace falta ninguna ROM ni TOS de Atari, y no hay Python, ni caché, ni instantánea del cargador original. Los datos del juego se mantienen separados del programa: el ZIP de Windows y la AppImage de Linux incluyen un fichero `DOW` opcional; los demás paquetes requieren que el usuario coloque uno de los ficheros compatibles en `original/`: `DOW` (CRC32 de referencia `6703B50F`) o la imagen de disco Replicants (CRC32 `F6E84D7A`). La imagen se lee directamente, sin crear un `DOW` alternativo. El volcado de gráficos se genera desde la fuente seleccionada la primera vez que arranca el programa.
+
+**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **Qué añade al original**
 - Interpolación de fotogramas a la frecuencia de refresco de tu monitor, sprites subpíxel, y entrada y audio de baja latencia.
@@ -293,9 +311,18 @@ Esta es la **versión 1.1.2** (2026-10-20) de un **port nativo para Windows**, n
 - **Correcciones** de tirones y fallos que solo aparecen con frecuencias de fotogramas altas (todas se pueden desactivar).
 
 ## Inicio rápido
-1. El fichero del juego `FILES\DOW` debe estar en la carpeta **`data`**, junto a `dowport.exe` (`data\FILES\DOW`); el zip de la Release ya lo incluye, y si compilas desde el código lo copias ahí desde tu juego original. Es el único fichero original que hace falta y solo aporta los datos del juego; el resto de ficheros del disco no se usan. Si falta, el programa lo avisa y se cierra.
-2. Ejecuta `dowport.exe`. En el primer arranque prepara, en unos segundos, `assets\original\` (el volcado de gráficos, véase [Packs gráficos](#packs-gráficos)).
+1. Para Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente en la carpeta `original\` / `original/` junto al ejecutable. Para la AppImage de Linux sin DOW, usa `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`); la AppImage con DOW usa por defecto el `original/DOW` incluido.
+   - **Datos de disco duro:** el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia: `6703B50F`. Está en la carpeta `FILES` de la versión de disco duro de Pera Putnik.
+   - **Imagen de disco Replicants:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829.440 bytes). Colócala en la carpeta `original`. El port la detecta por CRC32, así que también sirve otro nombre `.st` con ese mismo CRC.
+
+   Si están los dos, se usa `original/DOW`. La imagen Replicants se lee directamente; el port no crea un `DOW` alternativo.
+2. Ejecuta `dowport.exe` (Windows) o `./dowport` (Linux). En el primer arranque prepara, en unos segundos, `assets/original/` (el volcado de gráficos, véase [Packs gráficos](#packs-gráficos)).
 3. Pulsa **Esc** (o **Start** del mando) para abrir el menú de opciones.
+
+Las AppImage y los paquetes `.tar.xz` de Linux incluyen SDL2, así que no hace falta instalar SDL2 en el sistema
+para ejecutarlos. SDL elige automáticamente el backend de audio disponible: normalmente usa el servicio de
+escritorio compatible con PulseAudio (también mediante la capa de compatibilidad de PipeWire) y, si no está,
+puede usar otro backend de SDL como ALSA. Define `SDL_AUDIODRIVER` solo si quieres anular esa selección.
 
 ## Controles
 Todas las teclas y botones del mando se pueden redefinir (véase más abajo); estos son los valores por defecto.
@@ -385,6 +412,8 @@ Pon tu propia música en `music/` (MP3; también funcionan OGG y WAV). Cada **su
 
 - **Puntos de bucle**: una canción puede tener al lado un fichero de texto con el mismo nombre (`mission.txt` para `mission.mp3`) que indica dónde va su bucle:
   ```
+  Las rutas anteriores describen una carpeta de Windows o una compilación Linux independiente. En la AppImage de Linux sin DOW, coloca cualquiera de los ficheros de datos en
+  `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`). La AppImage con DOW usa el `original/DOW` incluido; define `DOW_ORIGINAL_DIR` antes de iniciarla para usar otra carpeta.
   Loop point start = "4345980863"
   Loop point back = "230030420"
   ```
@@ -436,7 +465,8 @@ Lo que siempre se guarda es el **mapa anterior a la misión actual** (con el din
 ## Ficheros y carpetas
 ```
 dowport.exe          el programa
-data\FILES\DOW       el fichero del juego original (los datos del juego)           — lo pones tú
+original\DOW         datos de disco duro (CRC32 de referencia 6703B50F)            — o
+original\Dogs of War (1989)(Elite)[cr Replicants][t].st  imagen Replicants (CRC32 F6E84D7A)
 data\languages\      los textos de los menús, un fichero XML por idioma (english.xml, spanish.xml)
 default.json         opciones de fábrica (se leen si falta options.json o con «Restaurar opciones por defecto»)
 options.json         tus opciones (se escribe al cerrar el menú)
@@ -471,7 +501,8 @@ error.log            diagnóstico: sucesos inusuales, cortes de audio
 | `pad_fire`, … | botones del mando por nombre: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Solución de problemas
-- **«The original game file was not found»**: copia el fichero `DOW` de tu juego en `data\FILES\`, junto al exe. Si no es la versión esperada, el port informa de que no pudo iniciar el juego con él.
+- **«No supported game data found»**: para Windows o una compilación Linux independiente, coloca `DOW` (CRC32 de referencia `6703B50F`) o una imagen `.st` con CRC32 `F6E84D7A` directamente en `original\` / `original/`. Para la AppImage de Linux sin DOW, colócala en `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`).
+- **No hay sonido en Linux**: deja `SDL_AUDIODRIVER` sin definir para que SDL seleccione un backend disponible (normalmente el servicio compatible con PulseAudio del escritorio, incluido PipeWire, o ALSA). `error.log` muestra el driver seleccionado.
 - **El sonido crepita o se retrasa**: sube el margen de emulación (Re Pág) o desactiva *Audio de baja latencia*; `error.log` lista los cortes de audio.
 - **Tirones a 60 Hz**: deja activada la *Interpolación de fotogramas*, o usa *Velocidad del juego → Ajustar al refresco* con la interpolación desactivada.
 - **Un pack gráfico no hace nada**: solo reemplaza las celdas que difieren de `assets/original/`; borra esa carpeta para regenerar el volcado y comprueba los nombres y tamaños de las hojas.
@@ -479,20 +510,16 @@ error.log            diagnóstico: sucesos inusuales, cortes de audio
 
 ## Cómo funciona
 - **El juego**: su programa 68000 está traducido a C (`source/generated/`, una función C por rutina, ejecutándose como fibras cooperativas). Si alguna vez el juego salta a una dirección que no es código del juego (un estado corrupto) el port vuelve a una instantánea de unos segundos antes y lo registra (véase Solución de problemas).
-- **La máquina** (`tos.c`, `runtime/machine.c`): un Atari STE con un mini-TOS (justo el GEMDOS/BIOS/XBIOS que necesita el juego), teclado y joystick IKBD/ACIA, timers del MFP y zonas de paleta por línea de escaneo. En cada arranque `boot.c` construye la memoria que deja el cargador original (`RUNME.TOS` y `HAGA`) cuando salta al juego. Todo el código 68000, el del cargador incluido, ya es C, así que el único fichero original es `FILES\DOW`, que aporta los datos del juego; las pocas variables del cargador que lee el código están en el programa.
+- **La máquina** (`tos.c`, `runtime/machine.c`): un Atari STE con un mini-TOS (justo el GEMDOS/BIOS/XBIOS que necesita el juego), teclado y joystick IKBD/ACIA, timers del MFP y zonas de paleta por línea de escaneo. En cada arranque `boot.c` construye la memoria que deja el cargador original (`RUNME.TOS` y `HAGA`) cuando salta al juego. Todo el código 68000, el del cargador incluido, ya es C, así que la fuente original solo aporta los datos del juego; las pocas variables del cargador que lee el código están en el programa.
 - **Captura de escena** (`scene.c`): para cada fotograma lógico registra el fondo (búfer circular de scroll), el HUD y cada objeto dibujado (enemigos, jugador, balas, explosiones, vehículos…) con su posición, y mantiene un **atlas de sprites**.
 - **Presentador** (`render.c`, `present.c`): dibuja cualquier instante entre dos fotogramas lógicos, con scroll y sprites en posiciones intermedias, filtros del movimiento de los enemigos y estabilización del scroll.
-- **Salida**: `video.c` (Win32 + OpenGL 3.3), `ym.c`, `mixer.c`, `mp3.c` (Windows Media Foundation), `audioout.c` (waveOut / WASAPI), `menu.c` (GDI), `input.c` (XInput), `cfg.c`, `gfxpack.c`, `dump.c`.
+- **Salida**: `video.c` (Win32 + OpenGL 3.3), `ym.c`, `mixer.c`, `mp3.c` (minimp3 / stb_vorbis / lector WAV incluidos), `audioout.c` (waveOut / WASAPI), `menu.c` (`port/ui2d.c` portable), `input.c` (XInput), `cfg.c`, `gfxpack.c`, `dump.c`.
 - **Verificación**: la traducción se comprobó contra un emulador 68000 independiente, instrucción por instrucción y fotograma a fotograma, en las 12 misiones (los 4 MB de RAM completos, los registros de sonido y la paleta).
 
 ## Compilación desde el código fuente
-Todo está en `source/` (véase `source/README.md`). Instala un compilador de C (Zig, MinGW-w64 o clang) y ejecuta `source\build.bat`; escribe `build\dowport.exe`.
-
-## Licencia
-El código escrito para este proyecto (el programa para Windows de `source/host/`, la máquina de `source/runtime/`, los scripts de compilación y la documentación) se publica bajo la **GNU General Public License v3.0** (véase [LICENSE](LICENSE)).
-`source/generated/` es el propio programa del juego traducido a C: deriva del juego original, cuyos derechos siguen siendo de sus titulares. Los shaders de RetroArch conservan sus propias licencias (véase *Shaders y licencias*), y el fichero del juego `data\FILES\DOW`, los bancos de música y el pack gráfico que vienen en la Release tampoco están cubiertos por esta licencia.
+Todo está en `source/` (véase `source/README.md`). En Windows, instala Zig, MinGW-w64 o Clang y ejecuta `source\build.bat`; escribe `build\dowport.exe`. En Debian/Ubuntu Linux, instala `build-essential pkg-config libsdl2-dev` y ejecuta `bash source/build-linux.sh`; escribe `build/dowport`.
 
 ## Estado
-Funciona: arranque desde los ficheros originales, título, menús, mapa de misiones, tienda y todas las misiones con interpolación a 60 fps. Pendiente: más tipos de objeto (otros niveles y jefes).
+Funciona: arranque desde los ficheros originales, título, menús, mapa de misiones, tienda y las 12 misiones con interpolación a 60 fps en Windows y Linux. Las compilaciones x64 de ambas plataformas están disponibles en la [última versión](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/latest).
 
 Créditos: Claude Sonnet 5.5 y VooD.

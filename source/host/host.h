@@ -14,6 +14,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#ifndef _WIN32
+#include <strings.h>
+#define _stricmp strcasecmp
+#endif
 #include "cpu.h"
 
 #define STUB_BASE      0xE00800u
@@ -33,6 +37,10 @@ int file_exists(const char *p);
 int dir_exists(const char *p);
 uint8_t *read_file(const char *p, size_t *n); /* malloc; NULL on failure */
 int write_file(const char *p, const void *d, size_t n);
+int game_data_init(const char *original_dir);
+const char *game_data_error(void);
+size_t game_data_size(void);
+size_t game_data_read(size_t offset, uint8_t *out, size_t size);
 
 /* read/write of the Atari memory from the host (big-endian) */
 static inline uint32_t mr8(uint32_t a) {

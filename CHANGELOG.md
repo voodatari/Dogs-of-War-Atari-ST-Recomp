@@ -1,6 +1,13 @@
-# Changelog – Dogs of War, Windows port at 60 fps
+# Changelog – Dogs of War, Windows/Linux port at 60 fps
 
-This file lists, in order, the steps that led to the current version. Dates are those of the work sessions (2026). The project started as an analysis of the original game and went through three technical stages before reaching its present form: a prototype that ran the game on a 68000 emulator library inside a Python program, a hybrid with a native core, and the current **all-C port in which the whole game is translated to C**. Releases are numbered: **1.0** (2026-10-19) was the first public one and **1.1** (2026-10-20) the current one; the steps before 1.0 are listed by date.
+This file lists, in order, the steps that led to the current version. Dates are those of the work sessions (2026). The project started as an analysis of the original game and went through three technical stages before reaching its present form: a prototype that ran the game on a 68000 emulator library inside a Python program, a hybrid with a native core, and the current **all-C port in which the whole game is translated to C**. **Version 1.2.0** (2026-11-01) adds the Linux x86-64 port and completes Windows/Linux release packaging; earlier versions are listed below.
+
+## Version 1.2.0 (2026-11-01) – Linux x86-64 port and cross-platform packages
+- **Linux port with feature parity**: SDL2 handles the window, keyboard, controllers and audio; OpenGL 3.3 provides the same CRT presets and external RetroArch shaders as Windows. The same game, menus, controls, graphics packs and options are available on both platforms.
+- **Linux release builds**: two AppImages and two standalone `.tar.xz` packages are available; all Linux packages include SDL2. The Windows release ZIP is rebuilt with Zig. Each platform has a package with `DOW` and one without it.
+- **Linux audio compatibility**: SDL automatically selects the available system audio backend. Desktop sessions normally use the PulseAudio-compatible service (including PipeWire); systems without it can use another SDL backend such as ALSA. The selected driver is logged for diagnosis.
+- **First-song deadlock fixed on Linux**: the MP3 prefetcher and on-demand loader no longer look up files while holding the same non-recursive music mutex. Windows' recursive critical section had hidden this lock-order bug.
+- **Linux graphics-pack menu fixed**: the first-run graphics dump now atomically writes `assets/original/index.json` on Linux, enabling graphics-pack discovery and its Video-menu selector.
 
 ## Version 1.1.2 (2026-10-20)
 - **Graphics pack `mod`**: new `hud_left.png` and `hud_right.png` (the status panels at both sides of the screen) with a Charlie Sheen and Dolph Lundgren cameo.
@@ -109,9 +116,16 @@ The program is a single native C executable. Nothing is interpreted and nothing 
 
 ---
 
-# Registro de cambios – Dogs of War, port para Windows a 60 fps
+# Registro de cambios – Dogs of War, port para Windows/Linux a 60 fps
 
-Este fichero enumera, por orden, los pasos que llevaron a la versión actual. Las fechas son las de las sesiones de trabajo (2026). El proyecto empezó como un análisis del juego original y pasó por tres etapas técnicas hasta su forma actual: un prototipo que ejecutaba el juego con una biblioteca de emulación 68000 dentro de un programa en Python, un híbrido con núcleo nativo y el **port actual, todo en C, en el que el juego completo está traducido a C**. Las versiones publicadas están numeradas: la **1.0** (2026-10-19) fue la primera pública y la **1.1** (2026-10-20) es la actual; los pasos anteriores a la 1.0 se listan por fecha.
+Este fichero enumera, por orden, los pasos que llevaron a la versión actual. Las fechas son las de las sesiones de trabajo (2026). El proyecto empezó como un análisis del juego original y pasó por tres etapas técnicas hasta su forma actual: un prototipo que ejecutaba el juego con una biblioteca de emulación 68000 dentro de un programa en Python, un híbrido con núcleo nativo y el **port actual, todo en C, en el que el juego completo está traducido a C**. La **versión 1.2.0** (2026-11-01) añade el port x86-64 para Linux y completa los paquetes de Windows/Linux; las versiones anteriores se detallan más abajo.
+
+## Versión 1.2.0 (2026-11-01) – port Linux x86-64 y paquetes multiplataforma
+- **Port Linux con las mismas funciones**: SDL2 gestiona la ventana, el teclado, los mandos y el audio; OpenGL 3.3 ofrece los mismos efectos CRT y shaders RetroArch externos que Windows. Ambas plataformas comparten juego, menús, controles, packs gráficos y opciones.
+- **Paquetes Linux**: hay dos AppImage y dos paquetes `.tar.xz` independientes; todos incluyen SDL2. El ZIP de Windows se recompiló con Zig. Cada plataforma dispone de una variante con `DOW` y otra sin él.
+- **Compatibilidad de audio Linux**: SDL selecciona automáticamente el backend de audio del sistema disponible. En escritorios suele usar el servicio compatible con PulseAudio (incluido PipeWire); si no está disponible, puede usar otro backend como ALSA. El driver elegido aparece en el registro.
+- **Bloqueo al iniciar la primera canción corregido en Linux**: el precargador y el cargador bajo demanda ya no buscan ficheros mientras mantienen el mismo mutex de música no recursivo. La sección crítica recursiva de Windows ocultaba este error de orden de bloqueo.
+- **Menú de packs gráficos Linux corregido**: el volcado gráfico del primer inicio ahora guarda atómicamente `assets/original/index.json`, lo que permite descubrir los packs y mostrar el selector en la pestaña Vídeo.
 
 ## Versión 1.1.2 (2026-10-20)
 - **Pack gráfico `mod`**: nuevos `hud_left.png` y `hud_right.png` (los paneles laterales de la pantalla) con un cameo de Charlie Sheen y Dolph Lundgren.

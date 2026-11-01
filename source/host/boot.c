@@ -10,8 +10,8 @@
  *
  * What is built here (all of it identical to what the real loader leaves):
  *
- *   $2C00         the 60000 bytes of FILES/DOW from offset $5141C (the game's block: its tables and text; the
- *                 instructions in it are never executed)
+ *   $2C00         the 60000 bytes of game data from offset $5141C (the game's tables and text; the instructions in it
+ *                 are never executed)
  *   $81000        the same block (the game unpacks its graphics from there)
  *   LOADER_DATA   the few variables of the loader's hook code ($2000) and of the HAGA library ($3F8000) that the
  *                 translated code reads
@@ -43,23 +43,15 @@ static const struct {
     {0x3F9128, 2, {0x4E, 0x41}},
 };
 
-/* Reads a file of the game folder (the path relative to it); NULL if it is missing. */
-static uint8_t *load_game_file(const char *dir, const char *rel, size_t *n) {
-    char p[800];
-    snprintf(p, sizeof p, "%s/%s", dir, rel);
-    return read_file(p, n);
-}
-
-/* Builds the machine state the original loader leaves when it jumps into the game (see above) from FILES/DOW, with
- * nothing executed: the memory, the loader's variables, the TOS system variables, the hardware registers, the
- * palette, and the CPU at the game's entry point. NULL if FILES/DOW cannot be read. */
+/* Builds the machine state the original loader leaves when it jumps into the game (see above) from the selected game
+ * data source, with nothing executed. NULL if the required data block is unavailable. */
 State *boot_state_make(const char *game_dir) {
-    size_t nd = 0;
-    uint8_t *dow = load_game_file(game_dir, "FILES/DOW", &nd);
     State *st = NULL;
-    if (!dow || nd < 0x5141C + 60000) {
-        host_log("Boot: FILES/DOW is missing or is not the expected version");
-        goto done;
+    uint8_t block[60000];
+    (void)game_dir;
+    if (game_data_read(0x5141C, block, sizeof block) != sizeof block) {
+        host_log("Boot: the required game data block is unavailable");
+        return NULL;
     }
     tos_init(game_dir);
     memset(ram, 0, RAMSZ);
@@ -67,8 +59,8 @@ State *boot_state_make(const char *game_dir) {
     tos_machine_init();
     /* the game */
     /* the loader also leaves the file's block at $81000 (the game unpacks its graphics from there) */
-    memcpy(ram + 0x81000, dow + 0x5141C, 60000);
-    memcpy(ram + 0x2C00, dow + 0x5141C, 60000);
+    memcpy(ram + 0x81000, block, sizeof block);
+    memcpy(ram + 0x2C00, block, sizeof block);
     /* the variables of the loader (hook code at $2000 and HAGA library at $3F8000) */
     for (size_t i = 0; i < sizeof LOADER_DATA / sizeof LOADER_DATA[0]; i++)
         memcpy(ram + LOADER_DATA[i].a, LOADER_DATA[i].v, LOADER_DATA[i].n);
@@ -116,7 +108,5 @@ State *boot_state_make(const char *game_dir) {
     tos.vbl = 13;
     st = state_new();
     tos_save_state(st);
-done:
-    free(dow);
     return st;
 }

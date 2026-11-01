@@ -1,10 +1,8 @@
-# build output
+# local run artifacts (options, saves, caches, logs) and files generated from the game at first start
+build/options.json
+build/opciones.json
+build/saves/
+build/capturas/
+build/error.log
+build/assets/original/
 source/build/
-*.o
-*.pdb
-
-# files made by the program
-options.json
-error.log
-saves/
-assets/original/

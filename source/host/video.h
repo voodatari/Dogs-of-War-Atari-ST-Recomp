@@ -28,7 +28,7 @@ extern const char *VID_FILTERS[3], *VID_ASPECTS[4], *VID_PRESETS[4], *VID_SOURCE
 /* window + context; 0 on failure */
 int video_open(int w, int h, int src_w, int src_h, const char *shaders_dir);
 void video_close(void);
-/* 1 = no OpenGL: scaling with GDI, no shaders */
+/* 1 = software fallback: scaling without shader support */
 int video_is_software(void);
 void video_set_preset(const char *name);
 void video_use_external(const char *name); /* "" = quitar */
@@ -47,6 +47,8 @@ int video_screenshot(const char *path);
 const char *video_take_error(void);
 int video_refresh_hz(void);
 void *video_hwnd(void);
+int video_has_focus(void);
+int video_key_down(int vk);
 
 /* window events */
 enum { VE_QUIT, VE_KEY, VE_CHAR, VE_FOCUS, VE_RESIZE };

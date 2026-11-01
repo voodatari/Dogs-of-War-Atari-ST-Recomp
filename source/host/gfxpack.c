@@ -8,6 +8,7 @@
  * color indices.
  */
 #include "gfxpack.h"
+#include "port.h"
 #include "render.h"
 #include "level.h"
 #ifdef _WIN32
@@ -599,6 +600,21 @@ static int pal_sum(const uint8_t *pal) {
 /* ---- reading the packs ---- */
 /* Looks in the assets folder for the packs: every subfolder (except the dump) that has at least one sheet named in
  * the index. */
+static int inspect_pack_dir(const char *name, void *context) {
+    JsonNode *sheets = (JsonNode *)context;
+    if (name[0] == '.' || !strncmp(name, "original", 8))
+        return 1;
+    int any = 0;
+    for (int i = 0; i < sheets->cnt && !any; i++) {
+        char path[900];
+        snprintf(path, sizeof path, "%s/%s/%s.png", assets_dir, name, sheets->keys[i]);
+        any = file_exists(path);
+    }
+    if (any && npacks < 64)
+        snprintf(packs[npacks++], 96, "%s", name);
+    return 1;
+}
+
 static void list_packs(void) {
     npacks = 0;
     if (!dump_index || (int)jnum(dump_index, "format", 0) != 2)
@@ -606,27 +622,7 @@ static void list_packs(void) {
     JsonNode *sh = jget(dump_index, "sheets");
     if (!sh)
         return;
-#ifdef _WIN32
-    char pat[700];
-    snprintf(pat, sizeof pat, "%s/*", assets_dir);
-    WIN32_FIND_DATAA fd;
-    HANDLE h = FindFirstFileA(pat, &fd);
-    if (h == INVALID_HANDLE_VALUE)
-        return;
-    do {
-        if (!(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) || fd.cFileName[0] == '.' ||
-            !strncmp(fd.cFileName, "original", 8))
-            continue;
-        int any = 0;
-        for (int i = 0; i < sh->cnt && !any; i++) {
-            char p[900];
-            snprintf(p, sizeof p, "%s/%s/%s.png", assets_dir, fd.cFileName, sh->keys[i]);
-            any = file_exists(p);
-        }
-        if (any && npacks < 64)
-            snprintf(packs[npacks++], 96, "%s", fd.cFileName);
-    } while (FindNextFileA(h, &fd));
-    FindClose(h);
+    port_list_dirs(assets_dir, inspect_pack_dir, sh);
     for (int i = 1; i < npacks; i++) {
         char t[96];
         memcpy(t, packs[i], 96);
@@ -637,7 +633,6 @@ static void list_packs(void) {
         }
         memcpy(packs[j + 1], t, 96);
     }
-#endif
 }
 
 /* Adds a "layer": a full-screen or partial picture the pack replaced (title, map, shop, HUD panels...), with its

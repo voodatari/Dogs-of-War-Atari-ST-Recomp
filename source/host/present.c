@@ -3,6 +3,7 @@
  *             and choice of the frame to show.
  */
 #include "present.h"
+#include "port.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -35,25 +36,10 @@ PFlags pflags = {1, 1, 1, 1, 1, 1, 1, 1, 1};
 #define QCAP 512
 static Msg *msg_queue[QCAP];
 static int msg_head = 0, msg_count = 0;
-#ifdef _WIN32
-/* q_ev: new-message notice (the presenter waits here instead of spinning) */
-static CRITICAL_SECTION msg_lock;
-static int msg_lock_ready = 0;
-static HANDLE msg_event = NULL;
-#define QLOCK()                                                                                                        \
-    do {                                                                                                               \
-        if (!msg_lock_ready) {                                                                                         \
-            InitializeCriticalSection(&msg_lock);                                                                      \
-            msg_event = CreateEvent(NULL, FALSE, FALSE, NULL);                                                         \
-            msg_lock_ready = 1;                                                                                        \
-        }                                                                                                              \
-        EnterCriticalSection(&msg_lock);                                                                               \
-    } while (0)
-#define QUNLOCK() LeaveCriticalSection(&msg_lock)
-#else
-#define QLOCK()
-#define QUNLOCK()
-#endif
+static PortMutex *msg_lock;
+static PortEvent *msg_event;
+#define QLOCK()   port_mutex_lock(msg_lock)
+#define QUNLOCK() port_mutex_unlock(msg_lock)
 
 /* ---- queue of messages from the emulation thread ---- */
 /* Allocates a message of the given type (MSG_*). */
@@ -85,9 +71,7 @@ void msgq_push(Msg *m) {
             msg_queue[(msg_head + msg_count) % QCAP] = m;
             msg_count++;
             QUNLOCK();
-#ifdef _WIN32
-            SetEvent(msg_event);
-#endif
+            port_event_signal(msg_event);
             return;
         }
         QUNLOCK();
@@ -192,7 +176,20 @@ struct Presenter {
 /* ---- creating and querying the presenter ---- */
 /* Creates the presenter for images scaled S times (320*S x 200*S). */
 Presenter *present_new(int S) {
+    if (!msg_lock) {
+        msg_lock = port_mutex_new();
+        msg_event = port_event_new();
+        if (!msg_lock || !msg_event) {
+            port_mutex_free(msg_lock);
+            port_event_free(msg_event);
+            msg_lock = NULL;
+            msg_event = NULL;
+            return NULL;
+        }
+    }
     Presenter *p = (Presenter *)calloc(1, sizeof(Presenter));
+    if (!p)
+        return NULL;
     p->S = S;
     p->tv_last = -1e18;
     strcpy(p->scr, "other");
@@ -558,11 +555,8 @@ int present_wait_menu(Presenter *p, double timeout) {
         double left = t_end - now_s();
         if (left <= 0)
             return 0;
-#ifdef _WIN32
-        wait_event_ms(msg_event, left * 1000.0);
-#else
-        sleep_ms(left * 1000.0);
-#endif
+        unsigned wait_ms = left >= 4294967.0 ? 0xFFFFFFFFu : (unsigned)(left * 1000.0 + 0.999);
+        port_event_wait(msg_event, wait_ms);
     }
 }
 

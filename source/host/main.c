@@ -11,6 +11,7 @@
  * shaders exist. See main() for the sequence; the rest of the program is described in app.h.
  */
 #include "app.h"
+#include "port.h" /* port_alert: the fatal error dialog on any OS */
 
 /* ---------------------------------------------------------------------------------------------- start-up */
 
@@ -58,7 +59,7 @@ static int development_tools(void) {
         if (!dump_begin(game_data_dir, getenv("DOW_DUMP_OUT")))
             return 1;
         while (!dump_finished(&ok))
-            Sleep(100);
+            sleep_ms(100);
         host_log("graphics dump: %s in %.1f s", ok ? "ok" : "FAILED", now_s() - t0);
         return ok ? 0 : 1;
     }
@@ -86,13 +87,17 @@ static int open_video(int test_run) {
     char shaders_dir[700];
     snprintf(shaders_dir, sizeof shaders_dir, "%s/shaders", app_dir_path);
     if (!gl_ok) {
-        MessageBoxA(NULL, "OpenGL is not available.", "Dogs of War", MB_OK | MB_ICONERROR);
+        const char *error = video_take_error();
+        port_alert("Dogs of War", error ? error : "Could not open the video output.");
         return 0;
     }
     video_close();
     gl_ok = video_open(320 * render_scale, 200 * render_scale, 320 * render_scale, 200 * render_scale, shaders_dir);
-    if (!gl_ok)
+    if (!gl_ok) {
+        const char *error = video_take_error();
+        port_alert("Dogs of War", error ? error : "Could not open the video output.");
         return 0;
+    }
     apply_video_cfg();
     /* fullscreen unless the options say otherwise (automatic tests start in a window) */
     if (cfg_bool("fullscreen", !test_run)) {
@@ -131,7 +136,7 @@ static void make_graphics_dump_if_missing(void) {
             VEvent ev;
             while (video_poll(&ev)) { /* keep the window alive */
             }
-            Sleep(30);
+            sleep_ms(30);
         }
     }
     host_log("graphics dump: %s", ok ? "ready" : "FAILED (graphics packs will not be available)");
@@ -171,8 +176,7 @@ static int start_emulation(void) {
     god_mode = ec.god;
     infinite_money = ec.money;
     if (!emu_start(&ec)) {
-        MessageBoxA(NULL, "Could not start the game from the original files in the data folder.", "Dogs of War",
-                    MB_OK | MB_ICONERROR);
+        port_alert("Dogs of War", "Could not start the game from the supported data in original/.");
         return 0;
     }
     emu_post(EV_GAMEHZ, game_rate(), 0);
@@ -445,10 +449,9 @@ int main(int argc, char **argv) {
     script_fix = 1;
     parse_command_line(argc, argv, &no_sound, &fix_cli);
     if (!find_game_dir()) {
-        MessageBoxA(NULL,
-                    "The original game file was not found.\nCopy the FILES\\DOW file of the original Dogs of War into "
-                    "the \"data\\FILES\" folder next to dowport.exe.",
-                    "Dogs of War", MB_OK | MB_ICONERROR);
+        char message[512];
+        snprintf(message, sizeof message, "%s", game_data_error());
+        port_alert("Dogs of War", message);
         return 1;
     }
     {
@@ -467,6 +470,11 @@ int main(int argc, char **argv) {
         return 1;
     open_audio();
     presenter = present_new(render_scale);
+    if (!presenter) {
+        port_alert("Dogs of War", "Could not create the frame presenter.");
+        video_close();
+        return 1;
+    }
     present_set_ahead(presenter, 0.6 * 60.0 / monitor_hz);
     make_graphics_dump_if_missing();
     video_title("Dogs of War");
@@ -475,6 +483,11 @@ int main(int argc, char **argv) {
                                  pack_from_cmdline[0] ? pack_from_cmdline : cfg_str("graphics_pack", ""));
     gfxpack_attach();
     menu_build(audio_out != NULL, !video_is_software(), have_pack);
+    {
+        int rx, ry, rw, rh;
+        video_rect(&rx, &ry, &rw, &rh);
+        menu_warmup(menu_options, rw, rh);
+    }
     if (!start_emulation())
         return 1;
 
