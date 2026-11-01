@@ -30,7 +30,7 @@ source/
 1. Install a C compiler and put it in the `PATH`: [Zig](https://ziglang.org/download/) (`zig cc`), MinGW-w64 (`gcc`) or LLVM `clang`. To use another one set `CC`
    (for example `set CC=C:\tools\zig\zig.exe cc`).
 2. Run `build.bat` (incremental and parallel). It writes `..\build\dowport.exe`; `build.bat -Out some\folder` builds somewhere else, `-Clean` rebuilds everything.
-3. To create two distributable ZIPs in `..\dist\`, run `powershell -NoProfile -ExecutionPolicy Bypass -File package-windows.ps1` from this folder. One includes `original\DOW`; the other leaves out game data and includes instructions for adding it.
+3. To create distributable Windows ZIP packages in `..\dist\`, run `powershell -NoProfile -ExecutionPolicy Bypass -File package-windows.ps1` from this folder.
 
 ### Linux x86-64
 
@@ -42,18 +42,14 @@ the Windows build. If the required OpenGL context cannot be created, Linux repor
 starting without CRT and external-shader support. SDL selects an available audio backend automatically; desktop
 Linux normally uses its PulseAudio-compatible service (including PipeWire), while systems without it can use
 another SDL backend such as ALSA. Set `SDL_AUDIODRIVER` only to override SDL's selection.
-On WSLg, the program selects Wayland and Mesa's D3D12 driver automatically so OpenGL uses the Windows GPU instead
-of falling back to software rendering; explicit `SDL_VIDEODRIVER` and `GALLIUM_DRIVER` settings are respected.
-
-To create two Linux AppImages after building, run `bash package-linux.sh` from `source/`. They are written to
-`../dist/`: one contains `original/DOW`; the other expects the user to put either supported game-data file in
-`$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`). Use the filename `DOW`
-for Pera Putnik's HDD conversion (CRC32 `6703B50F`), or
-`Dogs of War (1989)(Elite)[cr Replicants][t].st` for the Replicants disk image (CRC32 `F6E84D7A`, 829,440 bytes).
-The AppImage with DOW uses its bundled file by default; to select another data folder, set `DOW_ORIGINAL_DIR` before
-launching it. Both include the Linux executable, SDL2, replacement graphics, languages, music, shaders, defaults and
-documentation; OpenGL, graphics drivers and other system libraries remain host dependencies. Writable settings and
-saves use XDG configuration directories, while generated graphics go under XDG data directories.
+To package the Linux AppImage after building, run `bash package-linux.sh` from `source/`. The AppImage can read either
+`DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or
+`Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) from
+`$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or its bundled
+`original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder. It includes the Linux executable, SDL2,
+replacement graphics, languages, music, shaders, defaults and documentation; OpenGL, graphics drivers and other
+system libraries remain host dependencies. Writable settings and saves use XDG configuration directories, while
+generated graphics go under XDG data directories.
 
 To create the two standalone Linux `.tar.xz` packages instead, run `bash package-linux-tar.sh` from `source/`.
 They include SDL2 and a launcher; the host still supplies graphics, audio-server and system libraries.
@@ -61,9 +57,9 @@ They include SDL2 and a launcher; the host still supplies graphics, audio-server
 ## Run
 
 For the Windows executable and a standalone Linux build, put one data file directly in the existing **`original`**
-folder next to the executable (`dowport.exe` on Windows, `dowport` on Linux). For the Linux AppImage without DOW,
-put it in `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`); the AppImage
-that includes DOW uses its bundled `original/DOW` by default.
+folder next to the executable (`dowport.exe` on Windows, `dowport` on Linux). The Linux AppImage can read either
+supported data file from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`)
+or its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
 
 - Hard-disk data: name the file `DOW` (no extension); reference CRC32 `6703B50F`. It is Pera Putnik's HDD conversion, from the `FILES` folder of his hard-disk version.
 - Replicants disk image: `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32 `F6E84D7A` (829,440 bytes). Put it directly in `original/`. Detection uses the CRC, so another `.st` filename with the same CRC also works.
@@ -209,9 +205,10 @@ si no está, puede usar otro backend como ALSA. Define `SDL_AUDIODRIVER` solo pa
 ## Ejecución
 
 Para el ejecutable de Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente
-en la carpeta **`original`** junto al ejecutable (`dowport.exe` en Windows, `dowport` en Linux). Para la AppImage de
-Linux sin DOW, colócalo en `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`);
-la AppImage que incluye DOW usa por defecto el `original/DOW` incluido.
+en la carpeta **`original`** junto al ejecutable (`dowport.exe` en Windows, `dowport` en Linux). La AppImage de Linux
+puede leer cualquiera de los ficheros admitidos desde `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente
+`~/.local/share/dogs-of-war/original/`) o usar por defecto su `original/DOW` incluido; define `DOW_ORIGINAL_DIR`
+para usar otra carpeta.
 
 - Datos de disco duro: el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia `6703B50F`. Es la conversión a disco duro de Pera Putnik, en la carpeta `FILES` de su versión de disco duro.
 - Imagen de disco Replicants: `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32 `F6E84D7A` (829.440 bytes). Colócala directamente en `original/`. Se detecta por CRC, así que también sirve otro nombre `.st` con el mismo CRC.

@@ -16,16 +16,12 @@ music decoders and graphics pipeline remain shared C code.
 - OpenGL 3.3 is required for video; the Linux build supports the same built-in CRT presets and external single-pass
   RetroArch `.glsl` shaders as Windows. Startup reports an error if the required context cannot be created rather
   than silently disabling those features.
-- On WSLg, the backend selects Wayland and Mesa's D3D12 driver to use the Windows GPU instead of the X11/llvmpipe
-  fallback. Explicit `SDL_VIDEODRIVER` and `GALLIUM_DRIVER` settings take precedence.
 - The game runs in a POSIX `ucontext` coroutine. Threads, mutexes, events, timing, filesystem checks and directory
   scans use POSIX implementations in `port/port.c`.
-- Game data selection is shared with Windows: `original/DOW` takes priority, otherwise the supported Replicants
-  `.st` image is detected by CRC32 and read directly.
-- The AppImage without game data reads either `DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or
+- The AppImage can read either `DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or
   `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) from
-  `$XDG_DATA_HOME/dogs-of-war/original/`, normally `~/.local/share/dogs-of-war/original/`. The AppImage with DOW
-  uses its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
+  `$XDG_DATA_HOME/dogs-of-war/original/`, normally `~/.local/share/dogs-of-war/original/`, or its bundled
+  `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
 
 ### Windows backend
 
@@ -50,8 +46,8 @@ bash source/build-linux.sh
 The script writes `build/dowport` by default, alongside the existing `original/`, `data/`, `music/` and `assets/`
 folders. Set `CC=clang` or `OUT=/path/to/output` to choose another compiler or output folder. Run `build/dowport`
 from a desktop session with SDL2 video and audio drivers available.
-To package it as two AppImages, install `curl` and `squashfs-tools` and run `bash source/package-linux.sh` from the
-project root. The script downloads and verifies the AppImage packager and runtime, then writes both variants to
+To package it as an AppImage, install `curl` and `squashfs-tools` and run `bash source/package-linux.sh` from the
+project root. The script downloads and verifies the AppImage packager and runtime, then writes the package to
 `dist/`.
 For standalone `.tar.xz` packages that include SDL2 and a launcher, run `bash source/package-linux-tar.sh` from
 the project root. Graphics, audio-server and system libraries remain dependencies of the host.
@@ -60,7 +56,7 @@ the project root. Graphics, audio-server and system libraries remain dependencie
 
 The Windows backend remains in `host/video.c` and `host/audioout.c`. Build it as before with
 `source/build.bat` (or `source/build.ps1`) and Zig, MinGW-w64 or Clang.
-To create the two distributable Windows ZIPs after building, run
+To create distributable Windows ZIP packages after building, run
 `powershell -NoProfile -ExecutionPolicy Bypass -File source/package-windows.ps1` from the project root.
 
 ## Español
@@ -77,12 +73,12 @@ el dibujo de menús, los decodificadores de música y la cadena gráfica siguen 
 - OpenGL 3.3 es obligatorio para el vídeo; Linux ofrece los mismos efectos CRT integrados y shaders externos
   RetroArch `.glsl` de una pasada que Windows. Si no se puede crear el contexto requerido, el inicio informa del
   error en lugar de desactivar esas funciones sin avisar.
-- En WSLg, el backend selecciona Wayland y el driver D3D12 de Mesa para utilizar la GPU de Windows y evitar la
-  alternativa X11/llvmpipe. Se respetan los valores explícitos de `SDL_VIDEODRIVER` y `GALLIUM_DRIVER`.
 - El juego se ejecuta en una corrutina POSIX `ucontext`. Hilos, mutexes, eventos, reloj, comprobaciones de archivos
   y recorridos de carpetas usan las implementaciones POSIX de `port/port.c`.
-- La selección de datos es compartida con Windows: `original/DOW` tiene prioridad; si no está, se detecta por CRC32
-  la imagen Replicants `.st` admitida y se lee directamente.
+- La AppImage puede leer `DOW` (conversión a disco duro de Pera Putnik, CRC32 `6703B50F`) o
+  `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) desde
+  `$XDG_DATA_HOME/dogs-of-war/original/`, normalmente `~/.local/share/dogs-of-war/original/`, o usar por defecto su
+  `original/DOW` incluido; define `DOW_ORIGINAL_DIR` para usar otra carpeta.
 
 ### Backend de Windows
 
@@ -107,12 +103,11 @@ bash source/build-linux.sh
 Por defecto, el script genera `build/dowport`, junto a las carpetas existentes `original/`, `data/`, `music/` y
 `assets/`. Se puede elegir otro compilador con `CC=clang` o una carpeta de salida con `OUT=/ruta/de/salida`.
 Ejecuta `build/dowport` desde una sesión de escritorio con drivers de vídeo y audio SDL2 disponibles.
-`source/package-linux.sh` genera dos AppImage en `dist/`; la variante sin DOW busca los datos en
-`$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`). Allí se puede guardar
-`DOW` (conversión a disco duro de Pera Putnik, CRC32 `6703B50F`) o
-`Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`). La variante con DOW usa por defecto su
-`original/DOW` incluido; define `DOW_ORIGINAL_DIR` para usar otra carpeta. Para generarlas desde la raíz del proyecto,
-instala `curl` y
+`source/package-linux.sh` genera las AppImage de distribución en `dist/`. La AppImage puede leer `DOW` (conversión
+a disco duro de Pera Putnik, CRC32 `6703B50F`) o `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`)
+desde `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`) o usar por defecto
+su `original/DOW` incluido; define `DOW_ORIGINAL_DIR` para usar otra carpeta. Para empaquetar desde la raíz del
+proyecto, instala `curl` y
 `squashfs-tools` y ejecuta `bash source/package-linux.sh`; el script descarga y verifica el empaquetador y el
 runtime de AppImage. Para crear paquetes `.tar.xz` independientes que incluyan SDL2 y un lanzador, ejecuta
 `bash source/package-linux-tar.sh` desde la raíz. Los drivers gráficos, el servidor de audio y otras bibliotecas del

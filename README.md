@@ -45,7 +45,7 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 - **Fixes** for stutters and glitches that appear only at high frame rates (all can be switched off).
 
 ## Quick start
-1. For Windows and a standalone Linux build, put one of these data files directly in the existing `original\` / `original/` folder next to the executable. For the Linux AppImage without DOW, use `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`); the AppImage with DOW uses its bundled `original/DOW` by default.
+1. For Windows and a standalone Linux build, put one of these data files directly in the existing `original\` / `original/` folder next to the executable. The Linux AppImage can read either `DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) from `$XDG_DATA_HOME/dogs-of-war/original/`, normally `~/.local/share/dogs-of-war/original/`, or its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
    - **Hard-disk data:** name it `DOW` (no extension); reference CRC32: `6703B50F`. The file is in the `FILES` folder of the Pera Putnik hard-disk version.
    - **Replicants disk image:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829,440 bytes). Put it in the `original` folder. The port detects the image by CRC32, so another `.st` filename with that same CRC also works.
 
@@ -201,9 +201,7 @@ assets\<pack>\       graphics packs (e.g. assets\mod)
 saves\               save slots (.dows) and crash reports
 error.log            diagnostics: unusual events, audio gaps
 ```
-The paths above describe a Windows or standalone Linux folder. In the Linux AppImage without DOW, put either game-data file in
-`$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`). The AppImage with DOW uses its bundled
-`original/DOW`; set `DOW_ORIGINAL_DIR` before launching it to use another data folder.
+The Linux AppImage reads game data from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or uses its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
 
 ## Configuration reference
 `options.json` is written by the menu. If it does not exist, the options come from `default.json` (or from an older `opciones.json`). Keys that are not in the menu can be edited by hand and take effect at the next start:
@@ -228,7 +226,7 @@ The paths above describe a Windows or standalone Linux folder. In the Linux AppI
 | `pad_fire`, … | pad buttons by name: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Troubleshooting
-- **"No supported game data found"**: for Windows or a standalone Linux build, put `DOW` (reference CRC32 `6703B50F`) or a `.st` image with CRC32 `F6E84D7A` directly in `original\` / `original/`. For the Linux AppImage without DOW, put it in `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`).
+- **"No supported game data found"**: for Windows or a standalone Linux build, put `DOW` (reference CRC32 `6703B50F`) or a `.st` image with CRC32 `F6E84D7A` directly in `original\` / `original/`. The Linux AppImage reads either file from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or its bundled `original/DOW` by default.
 - **No sound on Linux**: leave `SDL_AUDIODRIVER` unset so SDL can select an available backend (normally the desktop's PulseAudio-compatible service, including PipeWire, or ALSA). `error.log` records the selected driver.
 - **Sound crackles or lags**: raise the emulation margin (Page Up) or turn off *Low-latency audio*; `error.log` lists audio gaps.
 - **Judder at 60 Hz**: leave *Frame interpolation* on, or use *Game speed → Match screen refresh* with interpolation off.
@@ -293,7 +291,7 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 - **Correcciones** de tirones y fallos que solo aparecen con frecuencias de fotogramas altas (todas se pueden desactivar).
 
 ## Inicio rápido
-1. Para Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente en la carpeta `original\` / `original/` junto al ejecutable. Para la AppImage de Linux sin DOW, usa `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`); la AppImage con DOW usa por defecto el `original/DOW` incluido.
+1. Para Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente en la carpeta `original\` / `original/` junto al ejecutable. La AppImage de Linux puede leer `DOW` (conversión a disco duro de Pera Putnik, CRC32 `6703B50F`) o `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) desde `$XDG_DATA_HOME/dogs-of-war/original/`, normalmente `~/.local/share/dogs-of-war/original/`, o usar por defecto su `original/DOW` incluido; define `DOW_ORIGINAL_DIR` para usar otra carpeta.
    - **Datos de disco duro:** el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia: `6703B50F`. Está en la carpeta `FILES` de la versión de disco duro de Pera Putnik.
    - **Imagen de disco Replicants:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829.440 bytes). Colócala en la carpeta `original`. El port la detecta por CRC32, así que también sirve otro nombre `.st` con ese mismo CRC.
 
@@ -386,8 +384,6 @@ Pon tu propia música en `music/` (MP3; también funcionan OGG y WAV). Cada **su
 
 - **Puntos de bucle**: una canción puede tener al lado un fichero de texto con el mismo nombre (`mission.txt` para `mission.mp3`) que indica dónde va su bucle:
   ```
-  Las rutas anteriores describen una carpeta de Windows o una compilación Linux independiente. En la AppImage de Linux sin DOW, coloca cualquiera de los ficheros de datos en
-  `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`). La AppImage con DOW usa el `original/DOW` incluido; define `DOW_ORIGINAL_DIR` antes de iniciarla para usar otra carpeta.
   Loop point start = "4345980863"
   Loop point back = "230030420"
   ```
@@ -475,7 +471,7 @@ error.log            diagnóstico: sucesos inusuales, cortes de audio
 | `pad_fire`, … | botones del mando por nombre: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Solución de problemas
-- **«No supported game data found»**: para Windows o una compilación Linux independiente, coloca `DOW` (CRC32 de referencia `6703B50F`) o una imagen `.st` con CRC32 `F6E84D7A` directamente en `original\` / `original/`. Para la AppImage de Linux sin DOW, colócala en `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`).
+- **«No supported game data found»**: para Windows o una compilación Linux independiente, coloca `DOW` (CRC32 de referencia `6703B50F`) o una imagen `.st` con CRC32 `F6E84D7A` directamente en `original\` / `original/`. La AppImage de Linux lee cualquiera de los ficheros desde `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`) o usa por defecto su `original/DOW` incluido.
 - **No hay sonido en Linux**: deja `SDL_AUDIODRIVER` sin definir para que SDL seleccione un backend disponible (normalmente el servicio compatible con PulseAudio del escritorio, incluido PipeWire, o ALSA). `error.log` muestra el driver seleccionado.
 - **El sonido crepita o se retrasa**: sube el margen de emulación (Re Pág) o desactiva *Audio de baja latencia*; `error.log` lista los cortes de audio.
 - **Tirones a 60 Hz**: deja activada la *Interpolación de fotogramas*, o usa *Velocidad del juego → Ajustar al refresco* con la interpolación desactivada.

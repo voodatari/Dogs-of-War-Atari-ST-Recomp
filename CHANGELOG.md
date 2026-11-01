@@ -4,7 +4,7 @@ This file lists, in order, the steps that led to the current version. Dates are 
 
 ## Version 1.2.0 (2026-11-01) – Linux x86-64 port and cross-platform packages
 - **Linux port with feature parity**: SDL2 handles the window, keyboard, controllers and audio; OpenGL 3.3 provides the same CRT presets and external RetroArch shaders as Windows. The same game, menus, controls, graphics packs and options are available on both platforms.
-- **Linux release builds**: two AppImages and two standalone `.tar.xz` packages are available; all Linux packages include SDL2. The Windows release ZIP is rebuilt with Zig. Each platform has a package with `DOW` and one without it.
+- **Linux release builds**: AppImage and standalone `.tar.xz` packages are available; all Linux packages include SDL2. The Windows release ZIP is rebuilt with Zig.
 - **Linux audio compatibility**: SDL automatically selects the available system audio backend. Desktop sessions normally use the PulseAudio-compatible service (including PipeWire); systems without it can use another SDL backend such as ALSA. The selected driver is logged for diagnosis.
 - **First-song deadlock fixed on Linux**: the MP3 prefetcher and on-demand loader no longer look up files while holding the same non-recursive music mutex. Windows' recursive critical section had hidden this lock-order bug.
 - **Linux graphics-pack menu fixed**: the first-run graphics dump now atomically writes `assets/original/index.json` on Linux, enabling graphics-pack discovery and its Video-menu selector.
@@ -123,7 +123,7 @@ Este fichero enumera, por orden, los pasos que llevaron a la versión actual. La
 
 ## Versión 1.2.0 (2026-11-01) – port Linux x86-64 y paquetes multiplataforma
 - **Port Linux con las mismas funciones**: SDL2 gestiona la ventana, el teclado, los mandos y el audio; OpenGL 3.3 ofrece los mismos efectos CRT y shaders RetroArch externos que Windows. Ambas plataformas comparten juego, menús, controles, packs gráficos y opciones.
-- **Paquetes Linux**: hay dos AppImage y dos paquetes `.tar.xz` independientes; todos incluyen SDL2. El ZIP de Windows se recompiló con Zig. Cada plataforma dispone de una variante con `DOW` y otra sin él.
+- **Paquetes Linux**: hay paquetes AppImage e independientes `.tar.xz`; todos incluyen SDL2. El ZIP de Windows se recompiló con Zig.
 - **Compatibilidad de audio Linux**: SDL selecciona automáticamente el backend de audio del sistema disponible. En escritorios suele usar el servicio compatible con PulseAudio (incluido PipeWire); si no está disponible, puede usar otro backend como ALSA. El driver elegido aparece en el registro.
 - **Bloqueo al iniciar la primera canción corregido en Linux**: el precargador y el cargador bajo demanda ya no buscan ficheros mientras mantienen el mismo mutex de música no recursivo. La sección crítica recursiva de Windows ocultaba este error de orden de bloqueo.
 - **Menú de packs gráficos Linux corregido**: el volcado gráfico del primer inicio ahora guarda atómicamente `assets/original/index.json`, lo que permite descubrir los packs y mostrar el selector en la pestaña Vídeo.
