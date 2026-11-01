@@ -8,6 +8,7 @@ This file lists, in order, the steps that led to the current version. Dates are 
 - **Linux audio compatibility**: SDL automatically selects the available system audio backend. Desktop sessions normally use the PulseAudio-compatible service (including PipeWire); systems without it can use another SDL backend such as ALSA. The selected driver is logged for diagnosis.
 - **First-song deadlock fixed on Linux**: the MP3 prefetcher and on-demand loader no longer look up files while holding the same non-recursive music mutex. Windows' recursive critical section had hidden this lock-order bug.
 - **Linux graphics-pack menu fixed**: the first-run graphics dump now atomically writes `assets/original/index.json` on Linux, enabling graphics-pack discovery and its Video-menu selector.
+- **Windows source build fixed**: the Zig/PowerShell build now excludes the portable padmap backend, avoiding duplicate symbols with the native GDI backend.
 
 ## Version 1.1.2 (2026-10-20)
 - **Graphics pack `mod`**: new `hud_left.png` and `hud_right.png` (the status panels at both sides of the screen) with a Charlie Sheen and Dolph Lundgren cameo.
