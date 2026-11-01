@@ -16,7 +16,7 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 
 **What it is.** The game's own 68000 program has been **translated entirely to C**, and it is compiled with a small Atari STE machine (mini-TOS, timers, keyboard and joystick, video, YM2149 sound chip) and a native Windows or Linux host into one executable. The original game logic runs unchanged at its own 25 Hz; the port draws the images in between.
 
-**What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, no Atari ROM or TOS is needed, and there is no Python, no cache and no snapshot of the original loader. The game data is kept separate from the program: the Windows ZIP and Linux AppImage releases include an optional `DOW` file, while the other packages require users to provide one of the supported data files in `original/`: `DOW` (reference CRC32 `6703B50F`) or the Replicants disk image (CRC32 `F6E84D7A`). The disk image is read directly; no replacement `DOW` file is created. The graphics dump is generated from the selected source the first time the program starts.
+**What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, and no Atari ROM or TOS is needed.
 
 **Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
@@ -49,7 +49,7 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
    - **Hard-disk data:** name it `DOW` (no extension); reference CRC32: `6703B50F`. The file is in the `FILES` folder of the Pera Putnik hard-disk version.
    - **Replicants disk image:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829,440 bytes). Put it in the `original` folder. The port detects the image by CRC32, so another `.st` filename with that same CRC also works.
 
-   If both files are present, `original/DOW` takes priority. The Replicants image is read directly; the port does not create a replacement `DOW`.
+   If both files are present, `original/DOW` takes priority. The Replicants image is read directly.
 2. Run `dowport.exe` (Windows) or `./dowport` (Linux). On the first start it prepares, in a few seconds, `assets/original/` (the graphics dump, see [Graphics packs](#graphics-packs)).
 3. Press **Esc** (or the pad's **Start**) for the options menu.
 
@@ -87,8 +87,6 @@ The first pad is player 1 (added to the keyboard) and the second pad is player 2
 unassigned, and a key already used by another action is taken from it. *Restore default controls* resets everything.
 
 **Typing**: on the screens that ask for text (the name in the high-score table) every letter A–Z (including **Z**, which is also the second fire key, and **V**), the digits, Backspace, Delete and the usual punctuation keys are passed to the game.
-
-**The picture of the gamepad** (*Controls* tab) is drawn by the program, not an image file: every box says what that button does *now*, so it follows the buttons you redefine, shows the right stick greyed out when twin-stick is off, lists an action assigned to L3 / R3 under its stick, and is shown in the menu language. It is at its largest in fullscreen.
 
 ## Options menu
 Open it with **Esc** or **Start**; the game is paused while it is open. The options are grouped in **tabs** (the bar under the title). Up/down select an option, left/right change its value, **Enter / A** accepts, **Esc / B / Start** closes.
@@ -272,7 +270,7 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 
 **Qué es.** El programa 68000 del juego se ha **traducido por completo a C**, y se compila junto con una pequeña máquina Atari STE (mini-TOS, timers, teclado y joystick, vídeo y chip de sonido YM2149) y un host nativo para Windows o Linux en un único ejecutable. La lógica original se ejecuta sin cambios a 25 Hz; el port dibuja las imágenes intermedias.
 
-**Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000, no hace falta ninguna ROM ni TOS de Atari, y no hay Python, ni caché, ni instantánea del cargador original. Los datos del juego se mantienen separados del programa: el ZIP de Windows y la AppImage de Linux incluyen un fichero `DOW` opcional; los demás paquetes requieren que el usuario coloque uno de los ficheros compatibles en `original/`: `DOW` (CRC32 de referencia `6703B50F`) o la imagen de disco Replicants (CRC32 `F6E84D7A`). La imagen se lee directamente, sin crear un `DOW` alternativo. El volcado de gráficos se genera desde la fuente seleccionada la primera vez que arranca el programa.
+**Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000 ni hace falta ninguna ROM o TOS de Atari.
 
 **Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
@@ -305,7 +303,7 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
    - **Datos de disco duro:** el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia: `6703B50F`. Está en la carpeta `FILES` de la versión de disco duro de Pera Putnik.
    - **Imagen de disco Replicants:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829.440 bytes). Colócala en la carpeta `original`. El port la detecta por CRC32, así que también sirve otro nombre `.st` con ese mismo CRC.
 
-   Si están los dos, se usa `original/DOW`. La imagen Replicants se lee directamente; el port no crea un `DOW` alternativo.
+   Si están los dos, se usa `original/DOW`. La imagen Replicants se lee directamente.
 2. Ejecuta `dowport.exe` (Windows) o `./dowport` (Linux). En el primer arranque prepara, en unos segundos, `assets/original/` (el volcado de gráficos, véase [Packs gráficos](#packs-gráficos)).
 3. Pulsa **Esc** (o **Start** del mando) para abrir el menú de opciones.
 
@@ -343,8 +341,6 @@ El primer mando es el jugador 1 (se suma al teclado) y el segundo mando es el ju
 sin asignar, y una tecla que ya usa otra acción se le quita. *Restaurar controles por defecto* lo devuelve todo a su valor original.
 
 **Escribir**: en las pantallas que piden texto (el nombre en la tabla de récords) se pasan al juego todas las letras A–Z (incluidas la **Z**, que además es la segunda tecla de disparo, y la **V**), los dígitos, Retroceso, Supr y las teclas de puntuación habituales.
-
-**La imagen del mando** (pestaña *Controles*) la dibuja el programa, no es un fichero de imagen: cada caja dice qué hace ese botón *ahora*, de modo que sigue los botones que redefinas, muestra el stick derecho atenuado cuando el doble stick está desactivado, indica bajo su stick una acción asignada a L3 / R3 y aparece en el idioma del menú. Se ve más grande en pantalla completa.
 
 ## Menú de opciones
 Se abre con **Esc** o **Start**; el juego queda en pausa mientras está abierto. Las opciones se agrupan en **pestañas** (la barra bajo el título). Arriba/abajo seleccionan una opción, izquierda/derecha cambian su valor, **Intro / A** acepta, **Esc / B / Start** lo cierra.
