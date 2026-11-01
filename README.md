@@ -14,11 +14,6 @@ A native Windows and Linux port of **Dogs of War** (Atari ST, Elite 1989, Pera P
 Atari STE machine and is drawn at your monitor's refresh rate: the game logic runs at 25 Hz and the port **interpolates between its frames**, so movement is smooth at 60 Hz
 (or 144 Hz…) with very low input latency. It is a single self-contained C program.
 
-## What is this version?
-This is **version 1.2.0** (2026-11-01) of an unofficial, fan-made **native Windows/Linux port** of *Dogs of War* (Atari ST, Elite Systems 1989, HAGA version by Pera Putnik); every step that led here is in the [changelog](CHANGELOG.md).
-
-**Cross-platform edition.** MP3, OGG and WAV playback uses bundled decoders, not Windows Media Foundation; `.wma` and `.m4a` are not supported. The menu uses the portable `port/ui2d.c` renderer. Windows uses native Win32/OpenGL, XInput and Windows audio APIs; Linux uses SDL2 for its window, input, game controllers and audio, with OpenGL 3.3 and the same built-in CRT effects and external RetroArch shaders. Linux release packages bundle SDL2 and automatically select an available audio backend. Build requirements and details are in [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
-
 **What it is.** The game's own 68000 program has been **translated entirely to C**, and it is compiled with a small Atari STE machine (mini-TOS, timers, keyboard and joystick, video, YM2149 sound chip) and a native Windows or Linux host into one executable. The original game logic runs unchanged at its own 25 Hz; the port draws the images in between.
 
 **What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, no Atari ROM or TOS is needed, and there is no Python, no cache and no snapshot of the original loader. The game data is kept separate from the program: the Windows ZIP and Linux AppImage releases include an optional `DOW` file, while the other packages require users to provide one of the supported data files in `original/`: `DOW` (reference CRC32 `6703B50F`) or the Replicants disk image (CRC32 `F6E84D7A`). The disk image is read directly; no replacement `DOW` file is created. The graphics dump is generated from the selected source the first time the program starts.
@@ -274,11 +269,6 @@ Credits: Claude Sonnet 5.5 & VooD.
 Port nativo para Windows y Linux de **Dogs of War** (Atari ST, Elite 1989, versión HAGA de Pera Putnik). El programa 68000 del propio juego, traducido a C, se ejecuta dentro de una pequeña
 máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la lógica del juego va a 25 Hz y el port **interpola entre sus fotogramas**, de modo que el movimiento es fluido a 60 Hz
 (o 144 Hz…) con una latencia de entrada muy baja. Es un único programa en C, autocontenido.
-
-## ¿Qué es esta versión?
-Esta es la **versión 1.2.0** (2026-11-01) de un **port nativo para Windows y Linux**, no oficial y hecho por aficionados, de *Dogs of War* (Atari ST, Elite Systems 1989, versión HAGA de Pera Putnik); todos los pasos que llevaron hasta aquí están en el [registro de cambios](CHANGELOG.md).
-
-**Edición multiplataforma.** La reproducción de MP3, OGG y WAV usa decodificadores incluidos, no Windows Media Foundation; `.wma` y `.m4a` no están soportados. El menú usa el renderizador portable `port/ui2d.c`. Windows conserva sus backends OpenGL, XInput y audio nativo; Linux usa SDL2 para ventana, entrada, mandos y audio, con OpenGL 3.3 y los mismos efectos CRT y shaders RetroArch externos. Los paquetes Linux incluyen SDL2 y seleccionan automáticamente un backend de audio disponible. Los requisitos y detalles están en [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
 **Qué es.** El programa 68000 del juego se ha **traducido por completo a C**, y se compila junto con una pequeña máquina Atari STE (mini-TOS, timers, teclado y joystick, vídeo y chip de sonido YM2149) y un host nativo para Windows o Linux en un único ejecutable. La lógica original se ejecuta sin cambios a 25 Hz; el port dibuja las imágenes intermedias.
 
