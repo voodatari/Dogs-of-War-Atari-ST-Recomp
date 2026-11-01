@@ -18,7 +18,7 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 
 **What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, no Atari ROM or TOS is needed, and there is no Python, no cache and no snapshot of the original loader. The game data is kept separate from the program: the Windows ZIP and Linux AppImage releases include an optional `DOW` file, while the other packages require users to provide one of the supported data files in `original/`: `DOW` (reference CRC32 `6703B50F`) or the Replicants disk image (CRC32 `F6E84D7A`). The disk image is read directly; no replacement `DOW` file is created. The graphics dump is generated from the selected source the first time the program starts.
 
-**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **What it adds to the original**
 - Frame interpolation to the refresh rate of your monitor, sub-pixel sprites, and low-latency input and audio.
@@ -274,7 +274,7 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 
 **Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000, no hace falta ninguna ROM ni TOS de Atari, y no hay Python, ni caché, ni instantánea del cargador original. Los datos del juego se mantienen separados del programa: el ZIP de Windows y la AppImage de Linux incluyen un fichero `DOW` opcional; los demás paquetes requieren que el usuario coloque uno de los ficheros compatibles en `original/`: `DOW` (CRC32 de referencia `6703B50F`) o la imagen de disco Replicants (CRC32 `F6E84D7A`). La imagen se lee directamente, sin crear un `DOW` alternativo. El volcado de gráficos se genera desde la fuente seleccionada la primera vez que arranca el programa.
 
-**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **Qué añade al original**
 - Interpolación de fotogramas a la frecuencia de refresco de tu monitor, sprites subpíxel, y entrada y audio de baja latencia.
