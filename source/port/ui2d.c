@@ -615,7 +615,7 @@ typedef struct Gl {
 typedef struct Face {
     stbtt_fontinfo info;
     double px;
-    int bold, valid;
+    int bold, valid, gdi;
     float scale, asc, desc;
     int height;
     Gl *hash[G_HASH];
@@ -643,7 +643,7 @@ static void face_evict(Face *f) {
 /* a face whose text cell is px pixels tall (the height the Windows '-height' of CreateFontA asks for), cached. The
  * glyphs keep their size: the requested number is the cell (ascent + descent), like tmHeight was, so the layout the
  * GDI code tuned stays */
-Ui2dFont ui2d_font_px(double px, int bold) {
+static Ui2dFont font_make(double px, int bold, int gdi) {
     if (px < 6)
         px = 6;
     if (px > 160)
@@ -651,7 +651,7 @@ Ui2dFont ui2d_font_px(double px, int bold) {
     bold = bold ? (bold >= 2 ? 2 : 1) : 0;
     px = (double)lround(px); /* the same size always lands in the same cache entry */
     for (int i = 0; i < F_MAX; i++)
-        if (faces[i].valid && faces[i].px == px && faces[i].bold == bold)
+        if (faces[i].valid && faces[i].px == px && faces[i].bold == bold && faces[i].gdi == gdi)
             return &faces[i];
     int base_ok = bold ? info_bold_ok : info_reg_ok;
     if (!base_ok) {
@@ -676,8 +676,22 @@ Ui2dFont ui2d_font_px(double px, int bold) {
     memset(f, 0, sizeof *f);
     f->px = px;
     f->bold = bold;
+    f->gdi = gdi;
     f->valid = 1;
     f->info = bold ? info_bold : info_reg;
+    if (gdi) {
+        /* what CreateFontA(-px, ..., "Segoe UI") gave the Windows build: em = px. Noto Sans is wider than Segoe UI in
+         * lower case, so it matches the text width at about 0.935 of that em (measured against GetTextExtentPoint32 on
+         * several menu strings and sizes, and on screenshots of both builds); the bold face is only used for the
+         * title, all in capitals, where Noto Bold is narrower than Segoe UI Bold, hence its 1.0. The cell is Segoe's own
+         * (tmHeight 1.33 px, baseline 1.075 px down, as measured at the sizes the menu uses) so the line spacing the menu
+         * layout was tuned with stays */
+        f->scale = (float)stbtt_ScaleForMappingEmToPixels(&f->info, px * (bold ? 1.0 : 0.935));
+        f->height = (int)lround(px * 1.33);
+        f->asc = (float)lround(px * 1.075);
+        f->desc = (float)f->height - f->asc;
+        return f;
+    }
     /* scaled so that ascent + descent come out exactly `px` (the cell height) */
     int asc = 0, desc = 0, gap = 0;
     stbtt_GetFontVMetrics(&f->info, &asc, &desc, &gap);
@@ -687,6 +701,14 @@ Ui2dFont ui2d_font_px(double px, int bold) {
     f->desc = (float)(-desc * f->scale);
     f->height = (int)(f->asc + f->desc + 0.5f);
     return f;
+}
+
+Ui2dFont ui2d_font_px(double px, int bold) {
+    return font_make(px, bold, 0);
+}
+
+Ui2dFont ui2d_font_gdi(double px, int bold) {
+    return font_make(px, bold, 1);
 }
 
 void ui2d_font_free(Ui2dFont f) {

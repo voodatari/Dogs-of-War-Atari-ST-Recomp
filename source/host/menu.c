@@ -418,10 +418,10 @@ int menu_signature(Menu *m, int w, int h, char *out, size_t n) {
     return (int)k;
 }
 
-/* fonts of the menu (of the height the GDI build asked for); the colours of the panel */
+/* fonts of the menu, as big as the Segoe UI of height h the GDI build asked for; the colours of the panel */
 static Ui2dFont mkfont(Ui2d *u, int h, int bold) {
     (void)u;
-    return ui2d_font_px(h, bold);
+    return ui2d_font_gdi(h, bold);
 }
 /* Width of a text. */
 static int text_w(Ui2dFont f, const char *s) {

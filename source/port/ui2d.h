@@ -53,6 +53,9 @@ void ui2d_gradient(Ui2d *u, const double *xy, int n, long top, long bottom);
  * ui2d_font_free frees: it is only a hook, keeping the call sites of the GDI code) */
 typedef void *Ui2dFont;
 Ui2dFont ui2d_font_px(double px, int bold);
+/* the same, sized like CreateFontA(-px, ..., "Segoe UI") of the Windows build: the text is as wide and as tall as that
+ * one was (the menu uses it); ui2d_font_px keeps px as the text cell instead */
+Ui2dFont ui2d_font_gdi(double px, int bold);
 void ui2d_font_free(Ui2dFont f);
 /* height of the text cell in pixels (the ascent + descent: what the Windows TEXTMETRIC tmHeight was) */
 int ui2d_font_height(Ui2dFont f);

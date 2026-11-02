@@ -18,7 +18,7 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 
 **What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, and no Atari ROM or TOS is needed.
 
-**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.1/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.1/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **What it adds to the original**
 - Frame interpolation to the refresh rate of your monitor, sub-pixel sprites, and low-latency input and audio.
@@ -264,7 +264,7 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 
 **Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000 ni hace falta ninguna ROM o TOS de Atari.
 
-**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.1/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.1/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **Qué añade al original**
 - Interpolación de fotogramas a la frecuencia de refresco de tu monitor, sprites subpíxel, y entrada y audio de baja latencia.
