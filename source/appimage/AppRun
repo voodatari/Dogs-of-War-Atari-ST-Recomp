@@ -8,9 +8,6 @@ user_data="${XDG_DATA_HOME:-$HOME/.local/share}/dogs-of-war"
 assets_dir="${DOW_ASSETS_DIR:-$user_data/assets}"
 
 mkdir -p "$user_dir/saves" "$assets_dir"
-if [ ! -e "$assets_dir/mod" ]; then
-    cp -a "$APPDIR/assets/mod" "$assets_dir/mod"
-fi
 
 if [ -z "${DOW_ORIGINAL_DIR:-}" ]; then
     if [ -f "$APPDIR/original/DOW" ]; then

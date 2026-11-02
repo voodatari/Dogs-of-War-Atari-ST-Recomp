@@ -6,7 +6,7 @@
 </p>
 
 > **Repository layout** — `source/`: the complete C source (the game translated to C in `source/generated/`, the machine in `source/runtime/`, and the platform backends in `source/host/` and `source/port/`; see `source/README.md` for Windows and Linux builds).
-> `build/`: the ready-to-run files: `dowport.exe` (Windows) or `dowport` (Linux), `original/` (supported game data), `data/` (languages and support files), `shaders/`, `music/`, `assets/mod/` and `default.json`.
+> `build/`: the ready-to-run files: `dowport.exe` (Windows) or `dowport` (Linux), `original/` (empty: you put your own game files there), `data/` (languages and support files), `shaders/`, `music/` and `default.json`.
 
 *Versión en español a continuación / Spanish version below: [Dogs of War – Port para Windows/Linux a 60 fps](#dogs-of-war--port-para-windowslinux-a-60-fps).*
 
@@ -18,12 +18,12 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 
 **What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, and no Atari ROM or TOS is needed.
 
-**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.2/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.2/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **What it adds to the original**
 - Frame interpolation to the refresh rate of your monitor, sub-pixel sprites, and low-latency input and audio.
 - Modern video: OpenGL, aspect modes, scaling filters, CRT effects and external shaders.
-- Sound: chip synthesis, MP3 music packs with loop points, multichannel effects with stereo panning and volumes per type.
+- Sound: chip synthesis, a choice of music (the Atari ST's own, the Amiga's from your own Amiga disk, or MP3 music packs with loop points), multichannel effects with stereo panning and volumes per type.
 - Replaceable graphics (graphics packs), three save slots and a "back to the mission map" command, redefinable controls with gamepad support, and menus in English and Spanish.
 - Corrections of enemy micro-stutters and of explosion glitches that only appear at high frame rates (all can be switched off).
 
@@ -38,19 +38,19 @@ Atari STE machine and is drawn at your monitor's refresh rate: the game logic ru
 - **60 fps and beyond**: frame interpolation of the 25 Hz game, optional sub-pixel sprite smoothing, and an optional game-speed mode that matches the refresh rate exactly.
 - **Low latency**: fast input polling (1000 Hz), low-latency audio output, tunable emulation margin.
 - **Video**: OpenGL output with four aspect modes, three scaling filters, built-in CRT effects (scanlines, phosphor mask, curvature, vignette, glow) and external RetroArch `.glsl` shaders.
-- **Sound**: YM2149 chip synthesis, a multichannel mixer for the sampled effects, stereo panning of effects by on-screen position, per-type volumes, and replacement **MP3 music packs**.
+- **Sound**: YM2149 chip synthesis, a multichannel mixer for the sampled effects, stereo panning of effects by on-screen position, per-type volumes, and a choice of music: the Atari ST's own, the Amiga version's (from your own disk) or replacement **MP3 music packs**.
 - **Graphics packs**: every sprite, tile and fixed screen of the game is dumped to editable PNG sheets; a pack of full-colour replacements is drawn instead, with the original animation and interpolation.
 - **Controls**: keyboard and XInput gamepads (two players), fully redefinable, plus pad shortcuts for rocket launcher, grenade and hold position, and an optional **twin-stick** mode (left stick moves, right stick aims and fires).
 - **Saving**: the original game has no saves; the port adds three slots and a "back to the mission map" command.
 - **Fixes** for stutters and glitches that appear only at high frame rates (all can be switched off).
 
 ## Quick start
-1. For Windows and a standalone Linux build, put one of these data files directly in the existing `original\` / `original/` folder next to the executable. The Linux AppImage can read either `DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) from `$XDG_DATA_HOME/dogs-of-war/original/`, normally `~/.local/share/dogs-of-war/original/`, or its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
+1. For Windows and a standalone Linux build, put one of these data files directly in the existing `original\` / `original/` folder next to the executable. The Linux AppImage can read either `DOW` (Pera Putnik's HDD conversion, CRC32 `6703B50F`) or `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) from `$XDG_DATA_HOME/dogs-of-war/original/`, normally `~/.local/share/dogs-of-war/original/`; set `DOW_ORIGINAL_DIR` to use another folder.
    - **Hard-disk data:** name it `DOW` (no extension); reference CRC32: `6703B50F`. The file is in the `FILES` folder of the Pera Putnik hard-disk version.
    - **Replicants disk image:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829,440 bytes). Put it in the `original` folder. The port detects the image by CRC32, so another `.st` filename with that same CRC also works.
 
    If both files are present, `original/DOW` takes priority. The Replicants image is read directly.
-2. Run `dowport.exe` (Windows) or `./dowport` (Linux). On the first start it prepares, in a few seconds, `assets/original/` (the graphics dump, see [Graphics packs](#graphics-packs)).
+2. Run `dowport.exe` (Windows) or `./dowport` (Linux). While it loads, a **startup screen** lists the files that were found and are going to be used, with a progress bar; it goes on by itself two seconds after loading ends, or at once with a fire button (the **Startup screen** option of the System tab turns it off). On the first start it prepares, in a few seconds, `assets/original/` (the graphics dump, see [Graphics packs](#graphics-packs)); the bar follows that work. If the game data is missing, the game's own window says so and tells you which file goes in which folder; put it there and start the program again.
 3. Press **Esc** (or the pad's **Start**) for the options menu.
 
 The Linux AppImages and `.tar.xz` packages include SDL2, so the system SDL2 package is not required at runtime.
@@ -91,11 +91,11 @@ unassigned, and a key already used by another action is taken from it. *Restore 
 | Tab | Contents |
 |---|---|
 | **Game** | Back to the mission map · Save slot (1–3, with date) · Save game · Load game · Restart game (back to "1 OR 2 PLAYER GAME?", skipping the intro) · Invulnerability · Infinite money (both always off at start-up) |
-| **Sound** | Sound on/off · Volume · Music (MP3) · Music (YM2149F) · Sampled FX · FX (YM2149F) · Multichannel FX · FX stereo panning · MP3 music · Music pack |
+| **Sound** | Sound on/off · Volume · Music (Amiga / packs) · Music (YM2149F) · Sampled FX · FX (YM2149F) · Multichannel FX · FX stereo panning · Music |
 | **Video** | Fullscreen · Aspect ratio · Shader source · Scaling filter · Shader / CRT effect and its controls · Graphics pack |
 | **Motion** | Frame interpolation · Sub-pixel smoothing · Game speed · and, under *Latency*: Fast input polling · Low-latency audio · Audio sync trim |
 | **Controls** | Twin-stick: right stick aims · Right stick also fires · Redefine keys and gamepad buttons (opens a window, with *Restore default controls*) · picture of the gamepad (drawn by the program from the current controls) |
-| **System** | Language · Restore default options (reloads `default.json`) · Credits · Continue · Quit |
+| **System** | Language · Startup screen · Restore default options (reloads `default.json`) · Credits · Continue · Quit |
 
 ### Languages
 The texts of the menus (and the messages they show) are read from `data\languages\*.xml`; the program ships with **English** and **Spanish** and the language is chosen in **System → Language** (saved as `language`).
@@ -119,12 +119,17 @@ If you redistribute the program with these shaders, keep their headers and licen
 
 ## Sound and music
 - **Chip sound**: the YM2149 (3 tones, noise, envelope) is synthesised from the game's register writes with their time stamp inside the frame, so it stays in sync with the picture. The music tempo is the one the game programs on MFP timer C (≈48.6 Hz), independent of the frame rate.
-- **Volumes**: overall *Volume* plus four sliders: *Music (MP3)*, *Music (YM2149F)* (the original songs), *Sampled FX* and *FX (YM2149F)* (effects the chip itself makes). Each one is a gain applied while the sound is mixed, so they move smoothly.
+- **Volumes**: overall *Volume* plus four sliders: *Music (Amiga / packs)* (the Amiga disk's music and the packs'), *Music (YM2149F)* (the Atari ST's original songs), *Sampled FX* and *FX (YM2149F)* (effects the chip itself makes). Each one is a gain applied while the sound is mixed, so they move smoothly.
 - **Multichannel FX** (off by default): the original plays effect samples on chip channels A and B (one voice each) and a new sample cuts the previous one. With this option the program mixes them: up to 8 voices at the original rate (4915.2 Hz) and 4-bit levels, read sample-and-hold like the chip. Different effects never cut each other; at most 2 instances of the *same* sample play at once (a third fades out the oldest in 10 ms), which stops gunfire and chained explosions from piling up. A soft limiter prevents clipping.
 - **FX stereo panning** (off by default): each effect is placed between the speakers by the horizontal position of the object that makes it (enemy, vehicle, explosion, your weapon…) when the sound starts: left edge of the play area 100 % left, centre both equally, right edge 100 % right (linear). Unknown origins are centred. Works with or without *Multichannel FX*.
 
-### MP3 music and music packs
-Put your own music in `music/` (MP3; OGG and WAV also work). Every **subfolder** with songs is a **music pack** (e.g. `music/arrange/`, `music/amiga/`); songs loose in `music/` form the pack "(music folder)". Choose it with **Music pack**; the list is rescanned each time the menu opens. File names inside a pack:
+### Music: Atari ST, Amiga and music packs
+The **Music** item of the Sound tab is a single list that goes through every music there is:
+- **Atari ST (original)**: the game's own chip music. It is always there and needs nothing.
+- **Amiga**: the music of the Amiga version, when its disk is in the `original/` folder (see below).
+- **The music packs** you put in `music/` (MP3; OGG and WAV also work): every **subfolder** with songs is a pack (e.g. `music/arrange/`); songs loose in `music/` form the pack "(music folder)".
+
+The list is rescanned each time the menu opens. When you rotate through it the new music **joins the song where the Atari ST's one is** (about; the original music keeps running silently underneath), instead of starting from the beginning. File names inside a pack:
 
 | File | Replaces the chip music of… |
 |---|---|
@@ -142,10 +147,13 @@ Put your own music in `music/` (MP3; OGG and WAV also work). Every **subfolder**
   Loop point back = "230030420"
   ```
   The numbers are samples of the file **at its own sample rate** (44100 Hz, 48000 Hz…), counted from the start of the file. The song plays from the beginning; when the playback reaches `Loop point start` it jumps back to `Loop point back` and repeats that stretch for as long as the song is needed. An empty file, a missing number, or points outside the song leave it as it was (the whole file in a loop; the last case is noted in `error.log`). It only applies to the songs that loop (`mission`, `map`, `highscores`, `song1`…); the ones that play once ignore it.
-- The MP3 music keeps playing while the options menu is open. The *mission failed* screen waits until its song has ended or a button is pressed.
-- With **MP3 music** on, every song that has a file plays from it and the chip version is muted meanwhile; **songs without a file keep the chip music**, so a single MP3 is enough. Sound effects always stay.
+- The music keeps playing while the options menu is open: the Atari ST chip music (the game's own music routine goes on running while the rest of the game stands still), the Amiga music and the music packs. The *mission failed* screen waits until its song has ended or a button is pressed.
+- With a pack chosen, every song that has a file plays from it and the chip version is muted meanwhile; **songs without a file keep the chip music**, so a single MP3 is enough. With **Atari ST (original)** only the chip music plays. Sound effects always stay.
 - `endlevel`, `bonus`, `fail` (and `song2`, `song4`) end by themselves in the original: their file plays **once, in full**, and the game waits for it to finish; pressing fire or any key while one of them plays fades it out (about 0.7 s) and the game goes on. `mission`, `map` and `highscores` **loop without a gap** (digital silence is trimmed at both ends and the audio is read as a ring buffer).
 - Files are decoded in the background, in order of use, right after start-up and whenever the pack changes. If a song starts before its file is ready, the chip music stays silent instead of leaking for a moment.
+
+### Music of your Amiga disk
+If you also own the **Amiga** version, put its disk in the same `original/` folder as the game data: either the disk image (`.adf`) or the WHDLoad package (`.lha`). Nothing of it is included in this program. The **Music** list then offers **Amiga** next to the Atari ST's and the packs' (it is the one chosen when there is no `arrange` pack). The program reads the sound driver of the Amiga game from your file (its songs and samples; the files are recognised by their content, not by their names) and plays the music in real time **with the game's own sound driver**, the way the Amiga did, instead of from MP3 files. The eight songs follow the same rules as the packs' (looping, ending by themselves, skipping with a button, volume while the options menu is open). It was checked against the Amiga disk image `Dogs of War (1989)(Elite)[cr].adf` and the WHDLoad package of DJ Mike (v2.1). The driver steps at the 50.4 Hz of the Amiga's CIA timer, so it is about 0.75 % faster than recordings made at exactly 50 Hz.
 
 ## Motion and latency
 **Frame interpolation** (on by default) shows the frames between the game's own 25 logic steps. **Sub-pixel smoothing** draws sprites at their exact in-between position instead of rounding to a whole pixel (it adds no frames).
@@ -171,6 +179,8 @@ The program makes it by itself the first time it starts (it plays the game with 
 
 **Making a pack.** Create a folder next to the dump (e.g. `assets/mod/`) and copy into it, with the same relative path and name, only the sheets you want to change. Edit them in any pixel-art editor in RGBA
 (any number of colours, soft alpha; keep the sheet size or an integer multiple of it). A pack folder in `assets/` is used automatically, or choose it with **Graphics pack**; **F9** reloads it while playing. Only cells that differ from the dump are used; everything else is drawn with the original graphics.
+
+**The example pack `mod`.** It is the pack that is used by default. It contains pictures of the game itself, so it is not handed out: the program carries only what the pack *changes* (the positions and the new values of the changed pixels), and the first time it starts, right after making the dump, it makes `assets/mod/` by copying the dump and applying those differences. If the dump is not the one the differences were taken from, nothing is written (the log says so). It is only made when the folder does not exist, so a pack of that name that you edit is never overwritten; delete it to get the example back.
 
 **How it works.** The game's graphics are 16-colour bitplanes, so a 256-colour picture cannot be written back into its memory. Instead the presenter recognises each graphic by its *content* (the same drawing of colour indices is the same graphic in any mission) and draws your PNG at the same place, with the same animation and the 60 fps interpolation. Screens are layers that replace only the pixels still equal to the original layer's, so text, cursors and scores keep being drawn by the game. Palette fades dim the replacements too.
 Not replaced: text and digits, the weapon icon / counters / lives of the side panels, and the rare sprites cut by the screen edge.
@@ -201,7 +211,7 @@ assets\<pack>\       graphics packs (e.g. assets\mod)
 saves\               save slots (.dows) and crash reports
 error.log            diagnostics: unusual events, audio gaps
 ```
-The Linux AppImage reads game data from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or uses its bundled `original/DOW` by default; set `DOW_ORIGINAL_DIR` to use another folder.
+The Linux AppImage reads game data from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`); set `DOW_ORIGINAL_DIR` to use another folder.
 
 ## Configuration reference
 `options.json` is written by the menu. If it does not exist, the options come from `default.json` (or from an older `opciones.json`). Keys that are not in the menu can be edited by hand and take effect at the next start:
@@ -217,7 +227,7 @@ The Linux AppImage reads game data from `$XDG_DATA_HOME/dogs-of-war/original/` (
 | `loading_seconds` | seconds the loader's text (copyright screen) stays on screen at start-up, between its fade in and its fade out (default 3; 0 = no wait) |
 | `fullscreen`, `aspect`, `filter`, `preset`, `external`, `params`, `shader_source` | Video tab (`params` = shader values; `shader_source` 0 = scaled, 1 = 320x200 averaged, 2 = 320x200 exact) |
 | `sound`, `volume`, `volume_mp3`, `volume_chip_music`, `volume_samples`, `volume_chip_fx` | volumes |
-| `multichannel_sfx`, `stereo_pan`, `mp3_music`, `music_pack` | Sound section |
+| `multichannel_sfx`, `stereo_pan`, `mp3_music`, `music_pack` | Sound section (`mp3_music` false = the Atari ST's own music; otherwise `music_pack` is the pack, `@amiga` for the Amiga disk) |
 | `fast_input`, `low_latency_audio`, `audio_sync_trim_ms` | Latency section |
 | `graphics_pack` | chosen graphics pack |
 | `pad_dual_stick` | twin-stick mode: the right stick aims (default `true`) |
@@ -226,7 +236,7 @@ The Linux AppImage reads game data from `$XDG_DATA_HOME/dogs-of-war/original/` (
 | `pad_fire`, … | pad buttons by name: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Troubleshooting
-- **"No supported game data found"**: for Windows or a standalone Linux build, put `DOW` (reference CRC32 `6703B50F`) or a `.st` image with CRC32 `F6E84D7A` directly in `original\` / `original/`. The Linux AppImage reads either file from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or its bundled `original/DOW` by default.
+- **"Game data not found"** (the screen the game shows when it has no data to start from): for Windows or a standalone Linux build, put `DOW` (reference CRC32 `6703B50F`) or a `.st` image with CRC32 `F6E84D7A` directly in `original\` / `original/`. The Linux AppImage reads either file from `$XDG_DATA_HOME/dogs-of-war/original/` (normally `~/.local/share/dogs-of-war/original/`) or its bundled `original/DOW` by default.
 - **No sound on Linux**: leave `SDL_AUDIODRIVER` unset so SDL can select an available backend (normally the desktop's PulseAudio-compatible service, including PipeWire, or ALSA). `error.log` records the selected driver.
 - **Sound crackles or lags**: raise the emulation margin (Page Up) or turn off *Low-latency audio*; `error.log` lists audio gaps.
 - **Judder at 60 Hz**: leave *Frame interpolation* on, or use *Game speed → Match screen refresh* with interpolation off.
@@ -254,7 +264,7 @@ Credits: Claude Sonnet 5.5 & VooD.
 # Dogs of War – Port para Windows/Linux a 60 fps
 
 > **Estructura del repositorio** — `source/`: el código fuente completo en C (el juego traducido a C en `source/generated/`, la máquina en `source/runtime/` y los backends en `source/host/` y `source/port/`; véase `source/README.md` para compilar en Windows y Linux).
-> `build/`: el programa listo para ejecutar: `dowport.exe`, `data/` (el fichero del juego original `FILES/DOW`), `shaders/`, `music/`, `assets/mod/` (pack gráfico) y `default.json`.
+> `build/`: el programa listo para ejecutar: `dowport.exe`, `data/` (el fichero del juego original `FILES/DOW`), `shaders/`, `music/` y `default.json`.
 
 Port nativo para Windows y Linux de **Dogs of War** (Atari ST, Elite 1989, versión HAGA de Pera Putnik). El programa 68000 del propio juego, traducido a C, se ejecuta dentro de una pequeña
 máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la lógica del juego va a 25 Hz y el port **interpola entre sus fotogramas**, de modo que el movimiento es fluido a 60 Hz
@@ -264,12 +274,12 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 
 **Qué no es.** No es un emulador del Atari ST: no se interpreta ninguna instrucción 68000 ni hace falta ninguna ROM o TOS de Atari.
 
-**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.2/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.2.2/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
+**Descargas:** [ZIP Windows x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [AppImage Linux x64](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
 
 **Qué añade al original**
 - Interpolación de fotogramas a la frecuencia de refresco de tu monitor, sprites subpíxel, y entrada y audio de baja latencia.
 - Vídeo moderno: OpenGL, modos de aspecto, filtros de escalado, efectos CRT y shaders externos.
-- Sonido: síntesis del chip, bancos de música MP3 con puntos de bucle, efectos multicanal con panorámica estéreo y volúmenes por tipo.
+- Sonido: síntesis del chip, a elegir la música (la del Atari ST, la del Amiga desde tu propio disco Amiga o bancos de música MP3 con puntos de bucle), efectos multicanal con panorámica estéreo y volúmenes por tipo.
 - Gráficos reemplazables (packs gráficos), tres ranuras de guardado y una orden «volver al mapa de misiones», controles redefinibles con soporte de mando, y menús en inglés y español.
 - Correcciones de microtirones de enemigos y de fallos de explosiones que solo aparecen con frecuencias de fotogramas altas (todas se pueden desactivar).
 
@@ -284,19 +294,19 @@ máquina Atari STE y se dibuja a la frecuencia de refresco de tu monitor: la ló
 - **60 fps y más**: interpolación de fotogramas del juego a 25 Hz, suavizado subpíxel opcional de los sprites y un modo opcional de velocidad del juego que coincide exactamente con la frecuencia de refresco.
 - **Baja latencia**: lectura rápida de entrada (1000 Hz), salida de audio de baja latencia y margen de emulación ajustable.
 - **Vídeo**: salida OpenGL con cuatro modos de aspecto, tres filtros de escalado, efectos CRT incorporados (líneas de escaneo, máscara de fósforo, curvatura, viñeteado, resplandor) y shaders `.glsl` externos de RetroArch.
-- **Sonido**: síntesis del chip YM2149, un mezclador multicanal para los efectos muestreados, panorámica estéreo de los efectos según su posición en pantalla, volúmenes por tipo y **bancos de música MP3** de reemplazo.
+- **Sonido**: síntesis del chip YM2149, un mezclador multicanal para los efectos muestreados, panorámica estéreo de los efectos según su posición en pantalla, volúmenes por tipo y música a elegir: la del Atari ST, la de la versión Amiga (desde tu propio disco) o **bancos de música MP3** de reemplazo.
 - **Packs gráficos**: todos los sprites, tiles y pantallas fijas del juego se vuelcan a hojas PNG editables; se dibuja un pack de reemplazos a todo color en su lugar, con la animación y la interpolación originales.
 - **Controles**: teclado y mandos XInput (dos jugadores), totalmente redefinibles, más atajos de mando para el lanzacohetes, la granada y mantener posición, y un modo opcional de **doble stick** (el izquierdo mueve, el derecho apunta y dispara).
 - **Guardado**: el juego original no tiene partidas guardadas; el port añade tres ranuras y una orden «volver al mapa de misiones».
 - **Correcciones** de tirones y fallos que solo aparecen con frecuencias de fotogramas altas (todas se pueden desactivar).
 
 ## Inicio rápido
-1. Para Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente en la carpeta `original\` / `original/` junto al ejecutable. La AppImage de Linux puede leer `DOW` (conversión a disco duro de Pera Putnik, CRC32 `6703B50F`) o `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) desde `$XDG_DATA_HOME/dogs-of-war/original/`, normalmente `~/.local/share/dogs-of-war/original/`, o usar por defecto su `original/DOW` incluido; define `DOW_ORIGINAL_DIR` para usar otra carpeta.
+1. Para Windows y una compilación Linux independiente, coloca uno de estos ficheros de datos directamente en la carpeta `original\` / `original/` junto al ejecutable. La AppImage de Linux puede leer `DOW` (conversión a disco duro de Pera Putnik, CRC32 `6703B50F`) o `Dogs of War (1989)(Elite)[cr Replicants][t].st` (CRC32 `F6E84D7A`) desde `$XDG_DATA_HOME/dogs-of-war/original/`, normalmente `~/.local/share/dogs-of-war/original/`; define `DOW_ORIGINAL_DIR` para usar otra carpeta.
    - **Datos de disco duro:** el fichero debe llamarse `DOW` (sin extensión); CRC32 de referencia: `6703B50F`. Está en la carpeta `FILES` de la versión de disco duro de Pera Putnik.
    - **Imagen de disco Replicants:** `Dogs of War (1989)(Elite)[cr Replicants][t].st`; CRC32: `F6E84D7A` (829.440 bytes). Colócala en la carpeta `original`. El port la detecta por CRC32, así que también sirve otro nombre `.st` con ese mismo CRC.
 
    Si están los dos, se usa `original/DOW`. La imagen Replicants se lee directamente.
-2. Ejecuta `dowport.exe` (Windows) o `./dowport` (Linux). En el primer arranque prepara, en unos segundos, `assets/original/` (el volcado de gráficos, véase [Packs gráficos](#packs-gráficos)).
+2. Ejecuta `dowport.exe` (Windows) o `./dowport` (Linux). Mientras carga, una **pantalla de inicio** enumera los ficheros encontrados que se van a usar, con una barra de progreso; pasa sola dos segundos después de terminar la carga, o al instante con un botón de disparo (la opción **Pantalla de inicio** de la pestaña Sistema la desactiva). En el primer arranque prepara, en unos segundos, `assets/original/` (el volcado de gráficos, véase [Packs gráficos](#packs-gráficos)); la barra sigue ese trabajo. Si faltan los datos del juego, la propia ventana del juego lo dice y explica qué fichero va en qué carpeta; ponlo ahí y vuelve a iniciar el programa.
 3. Pulsa **Esc** (o **Start** del mando) para abrir el menú de opciones.
 
 Las AppImage y los paquetes `.tar.xz` de Linux incluyen SDL2, así que no hace falta instalar SDL2 en el sistema
@@ -337,11 +347,11 @@ sin asignar, y una tecla que ya usa otra acción se le quita. *Restaurar control
 | Pestaña | Contenido |
 |---|---|
 | **Juego** | Volver al mapa de misiones · Ranura de guardado (1–3, con fecha) · Guardar partida · Cargar partida · Reiniciar juego (vuelve a «1 OR 2 PLAYER GAME?», saltándose la intro) · Invulnerabilidad · Dinero infinito (los dos siempre desactivados al arrancar) |
-| **Sonido** | Sonido sí/no · Volumen · Música (MP3) · Música (YM2149F) · Efectos muestreados · Efectos (YM2149F) · Efectos multicanal · Panorámica estéreo de efectos · Música MP3 · Banco de música |
+| **Sonido** | Sonido sí/no · Volumen · Música (Amiga / bancos) · Música (YM2149F) · Efectos muestreados · Efectos (YM2149F) · Efectos multicanal · Panorámica estéreo de efectos · Música |
 | **Vídeo** | Pantalla completa · Relación de aspecto · Origen del shader · Filtro de escalado · Shader / efecto CRT y sus controles · Pack gráfico |
 | **Movimiento** | Interpolación de fotogramas · Suavizado subpíxel · Velocidad del juego · y, bajo *Latencia*: Lectura rápida de entrada · Audio de baja latencia · Ajuste de sincronía del audio |
 | **Controles** | Doble stick: el derecho apunta · El stick derecho también dispara · Redefinir teclas y botones del mando (abre una ventana, con *Restaurar controles por defecto*) · imagen del mando (la dibuja el programa a partir de los controles actuales) |
-| **Sistema** | Idioma · Restaurar opciones por defecto (recarga `default.json`) · Créditos · Continuar · Salir |
+| **Sistema** | Idioma · Pantalla de inicio · Restaurar opciones por defecto (recarga `default.json`) · Créditos · Continuar · Salir |
 
 ### Idiomas
 Los textos de los menús (y los mensajes que muestran) se leen de `data\languages\*.xml`; el programa incluye **inglés** y **español** y el idioma se elige en **Sistema → Idioma** (se guarda como `language`).
@@ -365,12 +375,17 @@ Si redistribuyes el programa con estos shaders, conserva con ellos sus cabeceras
 
 ## Sonido y música
 - **Sonido del chip**: el YM2149 (3 tonos, ruido, envolvente) se sintetiza a partir de las escrituras de registros del juego con su marca de tiempo dentro del fotograma, así que se mantiene sincronizado con la imagen. El tempo de la música es el que el juego programa en el timer C del MFP (≈48,6 Hz), independiente de la frecuencia de fotogramas.
-- **Volúmenes**: *Volumen* general más cuatro deslizadores: *Música (MP3)*, *Música (YM2149F)* (las canciones originales), *Efectos muestreados* y *Efectos (YM2149F)* (los efectos que hace el propio chip). Cada uno es una ganancia que se aplica al mezclar el sonido, así que se mueven con suavidad.
+- **Volúmenes**: *Volumen* general más cuatro deslizadores: *Música (Amiga / bancos)* (la del disco Amiga y la de los bancos), *Música (YM2149F)* (las canciones originales del Atari ST), *Efectos muestreados* y *Efectos (YM2149F)* (los efectos que hace el propio chip). Cada uno es una ganancia que se aplica al mezclar el sonido, así que se mueven con suavidad.
 - **Efectos multicanal** (desactivado por defecto): el original reproduce las muestras de efectos en los canales A y B del chip (una voz cada uno) y una muestra nueva corta la anterior. Con esta opción el programa las mezcla: hasta 8 voces a la frecuencia original (4915,2 Hz) y niveles de 4 bits, leídas con muestreo y retención como el chip. Efectos distintos nunca se cortan entre sí; como máximo suenan 2 instancias de la *misma* muestra a la vez (una tercera apaga la más antigua en 10 ms), lo que evita que los disparos y las explosiones encadenadas se amontonen. Un limitador suave evita la saturación.
 - **Panorámica estéreo de efectos** (desactivada por defecto): cada efecto se coloca entre los altavoces según la posición horizontal del objeto que lo produce (enemigo, vehículo, explosión, tu arma…) cuando empieza el sonido: borde izquierdo de la zona de juego 100 % izquierda, centro los dos por igual, borde derecho 100 % derecha (lineal). Los orígenes desconocidos se centran. Funciona con o sin *Efectos multicanal*.
 
-### Música MP3 y bancos de música
-Pon tu propia música en `music/` (MP3; también funcionan OGG y WAV). Cada **subcarpeta** con canciones es un **banco de música** (p. ej. `music/arrange/`, `music/amiga/`); las canciones sueltas en `music/` forman el banco «(carpeta de música)». Se elige con **Banco de música**; la lista se vuelve a explorar cada vez que se abre el menú. Nombres de fichero dentro de un banco:
+### Música: Atari ST, Amiga y bancos de música
+El elemento **Música** de la pestaña Sonido es una única lista que recorre toda la música disponible:
+- **Atari ST (original)**: la música del chip del propio juego. Siempre está y no necesita nada.
+- **Amiga**: la música de la versión Amiga, cuando su disco está en la carpeta `original/` (véase más abajo).
+- **Los bancos de música** que pongas en `music/` (MP3; también funcionan OGG y WAV): cada **subcarpeta** con canciones es un banco (p. ej. `music/arrange/`); las canciones sueltas en `music/` forman el banco «(carpeta de música)».
+
+La lista se vuelve a explorar cada vez que se abre el menú. Al rotar por ella, la música nueva **entra en la canción por donde va la del Atari ST** (más o menos; la original sigue sonando en silencio por debajo), en lugar de empezar desde el principio. Nombres de fichero dentro de un banco:
 
 | Fichero | Sustituye la música del chip de… |
 |---|---|
@@ -388,10 +403,13 @@ Pon tu propia música en `music/` (MP3; también funcionan OGG y WAV). Cada **su
   Loop point back = "230030420"
   ```
   Los números son muestras del fichero **a su propia frecuencia de muestreo** (44100 Hz, 48000 Hz…), contadas desde el inicio del fichero. La canción suena desde el principio; cuando la reproducción llega a `Loop point start` salta a `Loop point back` y repite ese tramo mientras haga falta la canción. Un fichero vacío, un número que falte o puntos fuera de la canción la dejan como estaba (el fichero entero en bucle; el último caso se anota en `error.log`). Solo se aplica a las canciones que hacen bucle (`mission`, `map`, `highscores`, `song1`…); las que suenan una sola vez lo ignoran.
-- La música MP3 sigue sonando mientras el menú de opciones está abierto. La pantalla de *misión fallida* espera a que termine su canción o a que se pulse un botón.
-- Con **Música MP3** activada, toda canción que tenga fichero suena desde él y la versión del chip se silencia entretanto; **las canciones sin fichero conservan la música del chip**, así que basta con un solo MP3. Los efectos de sonido se mantienen siempre.
+- La música sigue sonando mientras el menú de opciones está abierto: la del chip del Atari ST (la rutina de música del propio juego sigue funcionando mientras el resto del juego está parado), la de Amiga y la de los bancos. La pantalla de *misión fallida* espera a que termine su canción o a que se pulse un botón.
+- Con un banco elegido, toda canción que tenga fichero suena desde él y la versión del chip se silencia entretanto; **las canciones sin fichero conservan la música del chip**, así que basta con un solo MP3. Con **Atari ST (original)** solo suena la música del chip. Los efectos de sonido se mantienen siempre.
 - `endlevel`, `bonus`, `fail` (y `song2`, `song4`) terminan por sí solas en el original: su fichero suena **una vez, completo**, y el juego espera a que acabe; si se pulsa fuego o cualquier tecla mientras suena una de ellas, se apaga con un fundido (unos 0,7 s) y el juego continúa. `mission`, `map` y `highscores` **hacen bucle sin cortes** (se recorta el silencio digital en ambos extremos y el audio se lee como un búfer circular).
 - Los ficheros se decodifican en segundo plano, por orden de uso, justo después del arranque y cada vez que cambia el banco. Si una canción empieza antes de que su fichero esté listo, la música del chip permanece en silencio en lugar de colarse un momento.
+
+### Música de tu disco Amiga
+Si tienes también la versión de **Amiga**, pon su disco en la misma carpeta `original/` que los datos del juego: la imagen de disco (`.adf`) o el paquete de WHDLoad (`.lha`). Nada de ello va incluido en este programa. La lista de **Música** ofrecerá entonces **Amiga** junto a la del Atari ST y la de los bancos (es la que se elige cuando no hay un banco `arrange`). El programa lee de tu fichero el controlador de sonido del juego de Amiga (sus canciones y sus muestras; los ficheros se reconocen por su contenido, no por su nombre) y toca la música en tiempo real **con el propio controlador del juego**, como lo hacía el Amiga, en lugar de usar ficheros MP3. Las ocho canciones siguen las mismas reglas que las de los bancos (repetición, las que terminan solas, saltarlas con un botón, volumen con el menú de opciones abierto). Se ha comprobado con la imagen de disco `Dogs of War (1989)(Elite)[cr].adf` y con el paquete de WHDLoad de DJ Mike (v2.1). El controlador avanza a los 50,4 Hz del temporizador CIA del Amiga, así que va un 0,75 % más rápido que las grabaciones hechas a 50 Hz exactos.
 
 ## Movimiento y latencia
 La **interpolación de fotogramas** (activada por defecto) muestra los fotogramas intermedios entre los 25 pasos lógicos del propio juego. El **suavizado subpíxel** dibuja los sprites en su posición intermedia exacta en lugar de redondearla a un píxel entero (no añade fotogramas).
@@ -417,6 +435,8 @@ El programa lo genera solo la primera vez que arranca (juega al juego con entrad
 
 **Crear un pack.** Crea una carpeta junto al volcado (p. ej. `assets/mod/`) y copia en ella, con la misma ruta relativa y el mismo nombre, solo las hojas que quieras cambiar. Edítalas en cualquier editor de pixel art en RGBA
 (cualquier número de colores, alfa suave; conserva el tamaño de la hoja o un múltiplo entero de él). Una carpeta de pack en `assets/` se usa automáticamente, o elígela con **Pack gráfico**; **F9** la recarga mientras juegas. Solo se usan las celdas que difieren del volcado; todo lo demás se dibuja con los gráficos originales.
+
+**El pack de ejemplo `mod`.** Es el pack que se usa por defecto. Contiene imágenes del propio juego, así que no se reparte: el programa lleva solo lo que el pack *cambia* (las posiciones y los valores nuevos de los píxeles cambiados) y, la primera vez que arranca, justo después de hacer el volcado, crea `assets/mod/` copiando el volcado y aplicando esas diferencias. Si el volcado no es aquel del que se tomaron las diferencias, no escribe nada (el registro lo dice). Solo se crea si la carpeta no existe, así que un pack con ese nombre que edites nunca se sobrescribe; bórralo para recuperar el de ejemplo.
 
 **Cómo funciona.** Los gráficos del juego son planos de bits de 16 colores, así que una imagen de 256 colores no se puede volver a escribir en su memoria. En su lugar, el presentador reconoce cada gráfico por su *contenido* (el mismo dibujo de índices de color es el mismo gráfico en cualquier misión) y dibuja tu PNG en el mismo lugar, con la misma animación y la interpolación a 60 fps. Las pantallas son capas que reemplazan solo los píxeles aún iguales a los de la capa original, de modo que los textos, cursores y marcadores los sigue dibujando el juego. Los fundidos de paleta también oscurecen los reemplazos.
 No se reemplazan: los textos y dígitos, el icono del arma / contadores / vidas de los paneles laterales y los raros sprites cortados por el borde de la pantalla.
@@ -462,7 +482,7 @@ error.log            diagnóstico: sucesos inusuales, cortes de audio
 | `loading_seconds` | segundos que el texto del cargador (pantalla de copyright) permanece en pantalla al arrancar, entre su fundido de entrada y su fundido de salida (por defecto 3; 0 = sin espera) |
 | `fullscreen`, `aspect`, `filter`, `preset`, `external`, `params`, `shader_source` | pestaña Vídeo (`params` = valores del shader; `shader_source` 0 = escalado, 1 = 320x200 promediado, 2 = 320x200 exacto) |
 | `sound`, `volume`, `volume_mp3`, `volume_chip_music`, `volume_samples`, `volume_chip_fx` | volúmenes |
-| `multichannel_sfx`, `stereo_pan`, `mp3_music`, `music_pack` | sección Sonido |
+| `multichannel_sfx`, `stereo_pan`, `mp3_music`, `music_pack` | sección Sonido (`mp3_music` falso = la música del propio Atari ST; si no, `music_pack` es el banco, `@amiga` para el disco Amiga) |
 | `fast_input`, `low_latency_audio`, `audio_sync_trim_ms` | sección Latencia |
 | `graphics_pack` | pack gráfico elegido |
 | `pad_dual_stick` | modo doble stick: el derecho apunta (por defecto `true`) |
@@ -471,7 +491,7 @@ error.log            diagnóstico: sucesos inusuales, cortes de audio
 | `pad_fire`, … | botones del mando por nombre: `"A"`, `"RT"`, `"Start"`…, `"none"` |
 
 ## Solución de problemas
-- **«No supported game data found»**: para Windows o una compilación Linux independiente, coloca `DOW` (CRC32 de referencia `6703B50F`) o una imagen `.st` con CRC32 `F6E84D7A` directamente en `original\` / `original/`. La AppImage de Linux lee cualquiera de los ficheros desde `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`) o usa por defecto su `original/DOW` incluido.
+- **«No se encuentran los datos del juego»** (la pantalla que muestra el juego cuando no tiene con qué arrancar): para Windows o una compilación Linux independiente, coloca `DOW` (CRC32 de referencia `6703B50F`) o una imagen `.st` con CRC32 `F6E84D7A` directamente en `original\` / `original/`. La AppImage de Linux lee cualquiera de los ficheros desde `$XDG_DATA_HOME/dogs-of-war/original/` (normalmente `~/.local/share/dogs-of-war/original/`) o usa por defecto su `original/DOW` incluido.
 - **No hay sonido en Linux**: deja `SDL_AUDIODRIVER` sin definir para que SDL seleccione un backend disponible (normalmente el servicio compatible con PulseAudio del escritorio, incluido PipeWire, o ALSA). `error.log` muestra el driver seleccionado.
 - **El sonido crepita o se retrasa**: sube el margen de emulación (Re Pág) o desactiva *Audio de baja latencia*; `error.log` lista los cortes de audio.
 - **Tirones a 60 Hz**: deja activada la *Interpolación de fotogramas*, o usa *Velocidad del juego → Ajustar al refresco* con la interpolación desactivada.

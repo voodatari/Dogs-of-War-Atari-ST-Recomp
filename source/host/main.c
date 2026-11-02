@@ -10,10 +10,14 @@
  * graphics dump is made before the presenter needs it, and the menu is built after the video library knows which
  * shaders exist. See main() for the sequence; the rest of the program is described in app.h.
  */
+#include "amiga_music.h"
 #include "app.h"
 #include "port.h" /* port_alert: the fatal error dialog on any OS */
 
 /* ---------------------------------------------------------------------------------------------- start-up */
+
+/* The lines of the loading screen: what was found and is going to be used. */
+enum { SL_DATA, SL_AMIGA, SL_GRAPHICS, SL_PACK, SL_MUSIC };
 
 /* Options of the command line: --original / --no-fix / --fix (enemy-script fix), --no-sound / --mute, --volume x,
  * --pack name (graphics pack). *fix_cli = -1 when the fix was not given, else 0 / 1. Some DOW_* variables do the same
@@ -131,10 +135,19 @@ static void make_graphics_dump_if_missing(void) {
     snprintf(out, sizeof out, "%s/original", assets_root);
     video_title("Dogs of War - preparing the graphics (first run, a few seconds)...");
     int ok = 0;
+    double t0 = now_s();
+    startup_line(SL_GRAPHICS, tr("startup.l.graphics"), tr("startup.d.dump"), 1);
     if (dump_begin(game_data_dir, out)) {
         while (!dump_finished(&ok)) {
-            VEvent ev;
-            while (video_poll(&ev)) { /* keep the window alive */
+            if (startup_active()) { /* the bar creeps towards the end of this step while the job runs */
+                char status[200];
+                dump_status(status, sizeof status);
+                startup_progress(0.18 + 0.42 * (1.0 - exp(-(now_s() - t0) / 6.0)),
+                                 status[0] ? status : tr("startup.d.dump"));
+            } else {
+                VEvent ev;
+                while (video_poll(&ev)) { /* keep the window alive */
+                }
             }
             sleep_ms(30);
         }
@@ -441,6 +454,30 @@ static void report_audio_statistics(void) {
         host_log_file("audio: %d gaps, %d buffer trims in this session", underruns, drops);
 }
 
+static void fill_startup_lines(void) {
+    startup_line(SL_DATA, tr("startup.l.data"), game_data_description(), 0);
+    char amiga[1024];
+    if (amiga_music_find(original_dir_path, amiga, sizeof amiga)) {
+        const char *base = strrchr(amiga, '/');
+        startup_line(SL_AMIGA, tr("startup.l.amiga"), base ? base + 1 : amiga, 0);
+    }
+    startup_line(SL_GRAPHICS, tr("startup.l.graphics"), "", 1);
+    startup_line(SL_PACK, tr("startup.l.pack"), "", 1);
+    const char *music = !mp3_on                           ? tr("val.music_atari")
+                        : !strcmp(music_pack, AMIGA_PACK) ? tr("val.music_amiga")
+                        : music_pack[0]                   ? music_pack
+                                                          : tr("val.musicfolder");
+    startup_line(SL_MUSIC, tr("startup.l.music"), music, 0);
+}
+
+/* The window was closed during start-up: closes what is open. */
+static int abort_start(void) {
+    if (audio_out)
+        audio_close(audio_out);
+    video_close();
+    return 0;
+}
+
 /* ---------------------------------------------------------------------------------------------- main */
 
 int main(int argc, char **argv) {
@@ -448,46 +485,72 @@ int main(int argc, char **argv) {
     int no_sound, fix_cli;
     script_fix = 1;
     parse_command_line(argc, argv, &no_sound, &fix_cli);
-    if (!find_game_dir()) {
-        char message[512];
-        snprintf(message, sizeof message, "%s", game_data_error());
-        port_alert("Dogs of War", message);
-        return 1;
-    }
+    int have_data = find_game_dir(); /* without it the window opens anyway, to say so (see below) */
     {
         char languages[800];
         snprintf(languages, sizeof languages, "%s/languages", game_data_dir);
         lang_init(languages);
     }
-    int exit_code = development_tools();
-    if (exit_code >= 0)
-        return exit_code;
+    if (have_data) {
+        int exit_code = development_tools();
+        if (exit_code >= 0)
+            return exit_code;
+    } else if (getenv("DOW_BOOT_OUT") || getenv("DOW_DUMP_OUT")) {
+        host_log("%s", game_data_error());
+        return 1;
+    }
 
     choose_display_size();
     int test_run = getenv("DOW_TEST") || getenv("DOW_SECONDS");
     load_options(fix_cli, no_sound);
     if (!open_video(test_run))
         return 1;
+    if (!have_data) { /* the game's own window says what is missing and waits for it to be closed */
+        startup_missing_data();
+        video_close();
+        return 1;
+    }
+    /* the loading screen: the files that were found and a bar (nothing at all if the option is off) */
+    startup_begin();
+    fill_startup_lines();
+    if (!startup_progress(0.05, tr("startup.d.audio")))
+        return abort_start();
     open_audio();
+    if (!startup_progress(0.12, tr("startup.d.video")))
+        return abort_start();
     presenter = present_new(render_scale);
     if (!presenter) {
+        startup_end();
         port_alert("Dogs of War", "Could not create the frame presenter.");
         video_close();
         return 1;
     }
     present_set_ahead(presenter, 0.6 * 60.0 / monitor_hz);
+    if (!startup_progress(0.18, tr("startup.d.graphics")))
+        return abort_start();
     make_graphics_dump_if_missing();
+    modpack_make_if_missing(assets_root); /* the example pack: the dump plus the differences the program carries */
+    startup_line(SL_GRAPHICS, tr("startup.l.graphics"), tr("startup.ready"), 0);
+    if (!startup_progress(0.62, tr("startup.d.packs")))
+        return abort_start();
     video_title("Dogs of War");
     /* graphics packs (sets of replacement sheets), then the menu, which lists them */
     int have_pack = gfxpack_init(assets_root, render_scale,
                                  pack_from_cmdline[0] ? pack_from_cmdline : cfg_str("graphics_pack", ""));
     gfxpack_attach();
+    startup_line(SL_PACK, tr("startup.l.pack"), gfxpack_name()[0] ? gfxpack_name() : tr("startup.original"), 0);
+    if (!startup_progress(0.80, tr("startup.d.menu")))
+        return abort_start();
     menu_build(audio_out != NULL, !video_is_software(), have_pack);
     {
         int rx, ry, rw, rh;
         video_rect(&rx, &ry, &rw, &rh);
         menu_warmup(menu_options, rw, rh);
     }
+    startup_progress(0.95, tr("startup.d.game"));
+    if (!startup_finish()) /* two seconds, or a fire button */
+        return abort_start();
+    startup_end();
     if (!start_emulation())
         return 1;
 

@@ -13,13 +13,11 @@ runtime_sha256="617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46
 required=(
     "$build_dir/dowport"
     "$build_dir/default.json"
-    "$build_dir/assets/mod"
     "$build_dir/data"
     "$build_dir/docs/screenshot.jpg"
     "$build_dir/music"
     "$build_dir/shaders"
     "$build_dir/LICENSE"
-    "$build_dir/original/DOW"
     "$source_dir/original/README.txt"
     "$project_dir/README.md"
     "$project_dir/CHANGELOG.md"
@@ -84,7 +82,6 @@ trap 'rm -rf "$stage"' EXIT
 
 make_appimage() {
     local name="$1"
-    local include_dow="$2"
     local appdir="$stage/$name.AppDir"
     local staging_output="$stage/$name.AppImage"
 
@@ -97,16 +94,12 @@ make_appimage() {
     install -m 644 "$source_dir/appimage/dogs-of-war.svg" "$appdir/dogs-of-war.svg"
     ln -s dogs-of-war.png "$appdir/.DirIcon"
     install -m 755 "$sdl_library" "$appdir/usr/lib/libSDL2-2.0.so.0"
-    cp -a "$build_dir/assets/mod" "$appdir/assets/"
     cp -a "$build_dir/data" "$appdir/"
     cp -a "$build_dir/music" "$appdir/"
     cp -a "$build_dir/shaders" "$appdir/"
     cp -a "$build_dir/default.json" "$build_dir/LICENSE" "$appdir/"
     cp -a "$build_dir/docs/screenshot.jpg" "$appdir/docs/"
     cp -a "$project_dir/README.md" "$project_dir/CHANGELOG.md" "$appdir/"
-    if [[ "$include_dow" == yes ]]; then
-        install -m 644 "$build_dir/original/DOW" "$appdir/original/DOW"
-    fi
     install -m 644 "$source_dir/original/README.txt" "$appdir/original/README.txt"
 
     env APPIMAGE_EXTRACT_AND_RUN=1 "$appimagetool" --no-appstream --comp zstd \
@@ -115,5 +108,4 @@ make_appimage() {
     printf 'Created %s\n' "$out_dir/$name.AppImage"
 }
 
-make_appimage DogsOfWar-x86_64-with-DOW yes
-make_appimage DogsOfWar-x86_64-without-DOW no
+make_appimage DogsOfWar-x86_64

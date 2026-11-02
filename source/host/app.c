@@ -40,7 +40,7 @@ char music_pack[80] = "arrange";
 
 /* ---- folders and files ---- */
 char app_dir_path[600], options_path[700], defaults_path[700], legacy_options_path[700];
-char game_data_dir[600], assets_root[700], save_dir[700], music_root[700];
+char game_data_dir[600], assets_root[700], save_dir[700], music_root[700], original_dir_path[800];
 char pack_from_cmdline[64] = "";
 
 double env_d(const char *name, double def) {
@@ -54,7 +54,11 @@ double env_d(const char *name, double def) {
 void set_paths(void) {
     snprintf(app_dir_path, sizeof app_dir_path, "%s", app_dir());
     snprintf(defaults_path, sizeof defaults_path, "%s/default.json", app_dir_path);
-    snprintf(music_root, sizeof music_root, "%s/music", app_dir_path);
+    const char *md = getenv("DOW_MUSIC_DIR");
+    if (md && md[0])
+        snprintf(music_root, sizeof music_root, "%s", md);
+    else
+        snprintf(music_root, sizeof music_root, "%s/music", app_dir_path);
     const char *user_dir = getenv("DOW_USER_DIR");
     if (user_dir && user_dir[0]) {
         snprintf(options_path, sizeof options_path, "%s/options.json", user_dir);
@@ -79,17 +83,14 @@ void set_paths(void) {
 /* Selects the original hard-disk data file or a supported disk image in the "original" folder. */
 int find_game_dir(void) {
     char data_dir[800];
-    char original_dir[800];
+    char *original_dir = original_dir_path;
     snprintf(data_dir, sizeof data_dir, "%s/data", app_dir_path);
     const char *od = getenv("DOW_ORIGINAL_DIR");
-    snprintf(original_dir, sizeof original_dir, "%s", od && od[0] ? od : "");
+    snprintf(original_dir, sizeof original_dir_path, "%s", od && od[0] ? od : "");
     if (!original_dir[0])
-        snprintf(original_dir, sizeof original_dir, "%s/original", app_dir_path);
-    if (game_data_init(original_dir))
-        snprintf(game_data_dir, sizeof game_data_dir, "%s", data_dir);
-    else
-        game_data_dir[0] = 0;
-    return game_data_dir[0] != 0;
+        snprintf(original_dir, sizeof original_dir_path, "%s/original", app_dir_path);
+    snprintf(game_data_dir, sizeof game_data_dir, "%s", data_dir); /* languages and support files: needed either way */
+    return game_data_init(original_dir);
 }
 
 /* ---------------------------------------------------------------------------------------------- loading */
@@ -124,6 +125,7 @@ void load_options(int fix_cli, int no_sound) {
     if (!getenv("DOW_VOL") && cfg_has("volume") && master_volume == 1.0)
         master_volume = cfg_num("volume", 1.0);
     mp3_on = cfg_bool("mp3_music", 1);
+    show_startup = cfg_bool("startup_screen", 1);
     multichannel_fx = cfg_bool("multichannel_sfx", 0);
     fx_pan = cfg_bool("stereo_pan", 0);
     pflags.subpx = cfg_bool("subpixel_smoothing", 1);
@@ -218,6 +220,7 @@ void save_options(void) {
     cfg_set_num("volume_samples", part_volume[2]);
     cfg_set_num("volume_chip_fx", part_volume[3]);
     cfg_set_bool("mp3_music", mp3_on);
+    cfg_set_bool("startup_screen", show_startup);
     cfg_set_bool("multichannel_sfx", multichannel_fx);
     cfg_set_bool("stereo_pan", fx_pan);
     cfg_set_bool("subpixel_smoothing", pflags.subpx);

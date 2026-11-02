@@ -58,6 +58,7 @@ static uint8_t *source_data;
 static size_t source_size;
 static int source_is_replicants;
 static char source_error[256] = "Game data has not been selected";
+static char source_desc[400]; /* what was found, for the start-up screen */
 
 static uint32_t crc32_bytes(const uint8_t *data, size_t size) {
     uint32_t crc = 0xFFFFFFFFu;
@@ -107,6 +108,7 @@ int game_data_init(const char *original_dir) {
     source_size = 0;
     source_is_replicants = 0;
     source_error[0] = 0;
+    source_desc[0] = 0;
 
     char path[800];
     snprintf(path, sizeof path, "%s/DOW", original_dir);
@@ -116,6 +118,8 @@ int game_data_init(const char *original_dir) {
         uint32_t crc = crc32_bytes(bytes, n);
         source_data = bytes;
         source_size = n;
+        snprintf(source_desc, sizeof source_desc, "DOW  (CRC32 %08X%s)", crc,
+                 crc == DOW_CRC32 ? "" : ", not the usual one");
         if (crc == DOW_CRC32)
             host_log("Game data: original/DOW (CRC32 %08X)", crc);
         else
@@ -132,6 +136,10 @@ int game_data_init(const char *original_dir) {
         source_data = bytes;
         source_size = n;
         source_is_replicants = 1;
+        {
+            const char *base = strrchr(path, '/');
+            snprintf(source_desc, sizeof source_desc, "%s  (CRC32 %08X)", base ? base + 1 : path, REPLICANTS_CRC32);
+        }
         host_log("Game data: direct Replicants image %s (CRC32 %08X; %u/%u logical bytes mapped)", path,
                  REPLICANTS_CRC32, REPLICANTS_MAPPED_SIZE, DOW_LOGICAL_SIZE);
         return 1;
@@ -142,6 +150,11 @@ int game_data_init(const char *original_dir) {
              "(CRC32 %08X) in original/.",
              REPLICANTS_CRC32);
     return 0;
+}
+
+/* What was found (a file name and its CRC32), for the loading screen. */
+const char *game_data_description(void) {
+    return source_desc;
 }
 
 const char *game_data_error(void) {

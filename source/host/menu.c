@@ -454,6 +454,19 @@ static int wrap(Ui2dFont f, const char *text, int width, char lines[][200], int 
     return nl;
 }
 
+/* Height of the row of an item: the information lines (separators with plain text: build, platform, credits) are
+ * drawn smaller and take less room, so that the actions below them stay in view. */
+static int row_h(const MItem *it, int lh, int lsm) {
+    return it->kind == MK_SEP && it->plain && it->label[0] ? lsm : lh;
+}
+/* Height of the rows from a to b (exclusive). */
+static int rows_h(const Menu *m, int a, int b, int lh, int lsm) {
+    int h = 0;
+    for (int i = a; i < b; i++)
+        h += row_h(&m->it[i], lh, lsm);
+    return h;
+}
+
 /* Draws the menu into a new RGBA image of W x H (the size of the picture area): the panel, the tab bar, the items
  * with their values, a picture if the tab has one, and the explanation of the item under the cursor and the key help
  * at the bottom. Where the image is transparent the game shows through. The panel always has the same size with tabs;
@@ -470,18 +483,21 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
         return NULL;
     Ui2dFont f = mkfont(u, fh, 0), fb = mkfont(u, fhb, 1);
     int lh = ui2d_font_height(f) + 5;
+    Ui2dFont fsm = mkfont(u, fh * 70 / 100, 0); /* the information lines */
+    int lsm = ui2d_font_height(fsm) + 2;
     int hb = ui2d_font_height(fb);
     /* hint_h: height of the explanation box; hpct: its font, in % of the options' */
-    int pw = (int)(W * 0.72), hint_lines = 4, has_img = 0, hint_h = 0, hpct = 82;
+    int pw = (int)(W * 0.72), hint_lines = 4, has_img = 0, compact = 0, hint_h = 0, hpct = 82;
     {
         int a0, b0;
         tab_range(m, &a0, &b0);
         for (int i = a0; i < b0; i++)
             if (m->it[i].kind == MK_IMAGE)
                 has_img = 1;
-        /* a tab with a picture: the explanation box is only as tall as the longest explanation of the tab needs, and
-         * the picture gets the rest */
-        if (has_img) {
+        /* a tab with a picture (or the System one, with its many lines): the explanation box is only as tall as the
+         * longest explanation of the tab needs, and the picture or the options get the rest */
+        compact = has_img || (m->ntabs && !strcmp(tab_item(m, m->tab)->label, "tab.system"));
+        if (compact) {
             hpct = 68;
             Ui2dFont fA = mkfont(u, fh * hpct / 100, 0);
             int lhA2 = ui2d_font_height(fA) + 4, need = 1;
@@ -499,15 +515,19 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
                 hint_h = 4 * lh;
         }
     }
-    if (!has_img)
+    if (!compact)
         hint_h = hint_lines * lh;
     /* the explanation box is 4 lines tall; if the text does not fit the font is reduced */
     int ph_max = (int)(H * 0.94), tabh = m->ntabs ? lh + 10 : 0;
     /* footer strip with the navigation instructions */
     int foot_h = fhs * 2 + 16;
-    int rows = (ph_max - hb - 24 - tabh - (hint_h + foot_h + 8)) / lh;
+    int area = ph_max - hb - 24 - tabh - (hint_h + foot_h + 8);
+    int rows = area / lh;
     if (rows < 5)
         rows = 5;
+    /* room for the items: with tabs (or a picture) the panel has its maximum height, so the whole strip counts and the
+     * smaller information rows can use what a whole row would leave over */
+    int avail = (m->ntabs || has_img) && area > rows * lh ? area : rows * lh;
     int lo, n;
     tab_range(m, &lo, &n);
     if (m->top < lo || m->top >= n)
@@ -515,10 +535,11 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
     if (!m->tabfocus) {
         if (m->cur < m->top)
             m->top = m->cur;
-        if (m->cur >= m->top + rows)
-            m->top = m->cur - rows + 1;
+        while (m->top < m->cur && rows_h(m, m->top, m->cur + 1, lh, lsm) > avail)
+            m->top++;
     }
-    if (m->top > lo && NOT_SELECTABLE(m->it[m->top - 1].kind) && m->cur - m->top < rows - 1)
+    if (m->top > lo && NOT_SELECTABLE(m->it[m->top - 1].kind) &&
+        (m->cur < m->top || rows_h(m, m->top - 1, m->cur + 1, lh, lsm) <= avail))
         m->top--;
     /* with tabs the panel always has the same (maximum) height, so it does not change size from tab to tab; a picture
      * takes the extra */
@@ -580,8 +601,10 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
         ui2d_polyline(u, lp, 2, 0x5a6496, 1);
     }
     int y = py + 14 + hb + tabh;
-    for (int i = m->top; i < n && i < m->top + rows; i++) {
+    int y_end = y + avail, end = m->top;
+    for (int i = m->top; i < n && y + row_h(&m->it[i], lh, lsm) <= y_end; i++) {
         MItem *it = &m->it[i];
+        end = i + 1;
         int sel = i == m->cur && !m->tabfocus;
         char label[128];
         tr_label(it->dynlabel ? it->dynlabel() : it->label, label, sizeof label);
@@ -598,9 +621,11 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
             continue;
         }
         if (it->kind == MK_SEP) {
-            if (it->plain)
-                text_at(u, f, px + 30, y, label, 0xd7d7e6);
-            else {
+            if (it->plain) {
+                text_at(u, fsm, px + 30, y, label, 0xb4b4c8);
+                y += lsm;
+                continue;
+            } else {
                 char t[160];
                 snprintf(t, sizeof t, "-- %s --", label);
                 text_at(u, f, px + (pw - text_w(f, t)) / 2, y, t, 0x78beff);
@@ -626,7 +651,7 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
     }
     if (m->top > lo)
         text_at(u, f, px + pw - 18, py + 10, "^", 0xc8c8c8);
-    if (m->top + rows < n)
+    if (end < n)
         text_at(u, f, px + pw - 18, py + ph - hint_h - foot_h - 26, "v", 0xc8c8c8);
     int by = by0;
     {

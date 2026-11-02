@@ -39,6 +39,7 @@ uint8_t *read_file(const char *p, size_t *n); /* malloc; NULL on failure */
 int write_file(const char *p, const void *d, size_t n);
 int game_data_init(const char *original_dir);
 const char *game_data_error(void);
+const char *game_data_description(void);
 size_t game_data_size(void);
 size_t game_data_read(size_t offset, uint8_t *out, size_t size);
 
@@ -80,6 +81,11 @@ uint8_t *png_read_indexed(const char *path, int *w, int *h); /* indices of a pal
 int png_write(const char *path, const uint8_t *px, int w, int h, int channels);
 /* 8-bit palette PNG */
 int png_write_indexed(const char *path, const uint8_t *idx, int w, int h, const uint8_t *plte768);
+int png_inflate(const uint8_t *in, size_t n, uint8_t *out, size_t outn); /* raw deflate; 1 if it worked */
+uint32_t png_crc32(const uint8_t *p, size_t n);
+
+/* modpack.c: makes assets/mod (the example pack) from assets/original and the pixel differences the program carries */
+int modpack_make_if_missing(const char *assets_root);
 
 /* ---- machine state (snapshots) ---- */
 typedef struct {
@@ -147,6 +153,7 @@ extern double g_load_seconds;
 int tos_run_slice(int32_t budget);
 /* one VBL period: clocks, VBL, palette zones (timer B), timer C, timer A, keyboard */
 void tos_vbl(void);
+void tos_music_tick(void); /* only the timer interrupts of a VBL (the music), for the paused game */
 /* input log: J port state, K scancode, F patch on, P address value (16-bit write) */
 void tos_ilog(char t, int a, int b);
 void tos_ilog_trim(uint32_t vbl);

@@ -1,4 +1,4 @@
-# Style of the program (source/host and source/port). Run: clang-format -i *.c *.h  (not ui2d_fonts.c: embedded data)
+# Style of the program (source/host, source/port, source/amiga). Run: clang-format -i *.c *.h  (not the generated dwam_*.c nor the data files ui2d_fonts.c and modpack_data.c)
 BasedOnStyle: LLVM
 IndentWidth: 4
 ContinuationIndentWidth: 4

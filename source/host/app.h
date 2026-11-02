@@ -64,6 +64,8 @@ extern int match_refresh;            /* without interpolation: game speed follow
 extern double lead;                  /* emulation margin in use = lead_with_interp or lead_without_interp */
 extern double lead_with_interp, lead_without_interp;
 extern int gfx_pack_chosen; /* the user chose a graphics pack (so it is saved) */
+/* the entry of the music list that stands for the Atari ST's own (chip) music: no pack, MP3 / Amiga music off */
+#define ATARI_PACK "@atari"
 extern char music_pack[80]; /* folder of the music pack in use (inside music_root; "" = files directly there) */
 
 /* ---- folders and files (all next to the executable unless the environment says otherwise) ---- */
@@ -75,11 +77,22 @@ extern char game_data_dir[600];       /* data: contains game support files and l
 extern char assets_root[700];         /* assets: graphics dump and graphics packs */
 extern char save_dir[700];            /* saves: the three save slots */
 extern char music_root[700];          /* music: the music packs */
+extern char original_dir_path[800];   /* folder where the player's own game data file goes (set by find_game_dir) */
 extern char pack_from_cmdline[64];    /* graphics pack requested with --pack (or DOW_GRAFICO) */
 
 /* ---- app.c ---- */
-double env_d(const char *name, double def);   /* a number from the environment */
-int find_game_dir(void);                      /* selects supported original data under original/; 0 if unavailable */
+double env_d(const char *name, double def); /* a number from the environment */
+int find_game_dir(void);                    /* selects supported original data under original/; 0 if unavailable */
+
+/* start-up screens (startup.c): the loading screen and the one that says the game data is missing */
+extern int show_startup; /* option "Startup screen" */
+int startup_active(void);
+void startup_begin(void);
+void startup_line(int slot, const char *label, const char *value, int pending);
+int startup_progress(double p, const char *what);
+int startup_finish(void);
+void startup_end(void);
+void startup_missing_data(void);
 void set_paths(void);                         /* fills the folders above from the executable's folder */
 void load_options(int fix_cli, int no_sound); /* reads options.json (or the older files) into the variables above */
 void save_options(void);                      /* writes them to options.json (not during automatic tests) */

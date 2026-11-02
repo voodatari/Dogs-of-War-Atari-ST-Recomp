@@ -1,13 +1,14 @@
 name: Linux build
 
-# Builds the Linux x64 AppImage (and the .tar.xz) from the source of the commit and the game files of the Windows ZIP
-# already published in a release, then attaches the AppImage to that release.
+# Builds the Linux x64 AppImage (and the .tar.xz) from the source of the commit and the support files (languages,
+# shaders, music, default options) of the Windows ZIP already published in a release, then attaches the AppImage to
+# that release. No game data is involved: the player puts their own files in original/.
 #   gh workflow run linux.yml -f tag=v1.2.0
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag whose Windows ZIP supplies the data (and that receives the AppImage)
+        description: Release tag whose Windows ZIP supplies the support files (and that receives the AppImage)
         required: true
       upload:
         description: Attach the AppImage to the release
@@ -31,15 +32,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libsdl2-dev libgl-dev squashfs-tools zstd xz-utils unzip
 
-      - name: Game data from the release's Windows ZIP
+      - name: Support files from the release's Windows ZIP
         run: |
           gh release download "$TAG" --pattern '*Windows*x64.zip' --dir "$RUNNER_TEMP/win"
           unzip -q "$RUNNER_TEMP/win/"*.zip -d "$RUNNER_TEMP/win/x"
           mkdir -p build/docs
-          for d in data assets music shaders original; do cp -a "$RUNNER_TEMP/win/x/$d" build/; done
+          for d in data music shaders; do cp -a "$RUNNER_TEMP/win/x/$d" build/; done
           cp -a "$RUNNER_TEMP/win/x/default.json" "$RUNNER_TEMP/win/x/LICENSE" build/
           cp docs/screenshot.jpg build/docs/
-          test -f build/original/DOW || { echo "The Windows ZIP of $TAG has no original/DOW"; exit 1; }
+          test ! -e "$RUNNER_TEMP/win/x/original/DOW" || { echo "The Windows ZIP of $TAG contains game data"; exit 1; }
 
       - name: Build
         run: bash source/build-linux.sh
@@ -49,7 +50,7 @@ jobs:
           bash source/package-linux.sh
           bash source/package-linux-tar.sh
           cd dist
-          cp DogsOfWar-x86_64-with-DOW.AppImage Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage
+          cp DogsOfWar-x86_64.AppImage Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage
           ls -l
           sha256sum *
 
@@ -57,7 +58,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           "$GITHUB_WORKSPACE/dist/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage" --appimage-extract >/dev/null
-          test -x squashfs-root/dowport && test -f squashfs-root/usr/lib/libSDL2-2.0.so.0 && test -f squashfs-root/original/DOW
+          test -x squashfs-root/dowport && test -f squashfs-root/usr/lib/libSDL2-2.0.so.0 && test ! -e squashfs-root/original/DOW
           ldd squashfs-root/dowport | grep -i "not found" && exit 1 || true
 
       - uses: actions/upload-artifact@v4

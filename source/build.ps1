@@ -26,8 +26,8 @@ function Q([string]$x) { if ($x -match '\s') { '"' + $x + '"' } else { $x } }
 $flags = @('-c', '-O2', '-w', '-DHOST_DIRECT', '-I', "$root\runtime", '-I', "$root\generated", '-I', "$root\host", '-I', "$root\port", '-I', "$root\thirdparty")
 $hostSources = @(Get-ChildItem "$root\host\*.c")
 $sources = @(Get-ChildItem "$root\generated\*.c") + @(Get-ChildItem "$root\runtime\*.c") + $hostSources +
-    @(Get-ChildItem "$root\port\*.c") + @(Get-Item "$root\thirdparty\stb_vorbis.c")
-$headers = @(Get-ChildItem "$root\generated\*.h", "$root\runtime\*.h", "$root\host\*.h", "$root\port\*.h", "$root\thirdparty\*.h")
+    @(Get-ChildItem "$root\port\*.c") + @(Get-ChildItem "$root\amiga\*.c") + @(Get-Item "$root\thirdparty\stb_vorbis.c")
+$headers = @(Get-ChildItem "$root\generated\*.h", "$root\runtime\*.h", "$root\host\*.h", "$root\port\*.h", "$root\amiga\*.h", "$root\thirdparty\*.h")
 $newest = ($headers | Measure-Object LastWriteTimeUtc -Maximum).Maximum
 $t0 = Get-Date
 

@@ -3,6 +3,7 @@
  * game's songs). The audio files may also lie loose in the music folder itself; that counts as one pack whose name is
  * the empty string. The menu lists the packs found here; the emulation thread is told which folder to read.
  */
+#include "amiga_music.h"
 #include "app.h"
 #include "port.h"
 
@@ -44,9 +45,15 @@ static int add_pack_dir(const char *name, void *context) {
     return 1;
 }
 
-/* Looks in the music folder: the loose files first (if any), then the subfolders in alphabetical order. */
+/* Builds the list the Music menu item goes through: the Atari ST's own music, the Amiga disk's (if there is one), the
+ * audio files loose in the music folder (if any), then its subfolders in alphabetical order. */
 void scan_packs(void) {
     npacks = 0;
+    snprintf(packs[npacks++], 80, "%s", ATARI_PACK);
+    /* the music of the player's own Amiga disk (an .adf or WHDLoad .lha next to the game data), if there is one */
+    char amiga_file[1024];
+    if (amiga_music_find(original_dir_path, amiga_file, sizeof amiga_file))
+        snprintf(packs[npacks++], 80, "%s", AMIGA_PACK);
     if (has_audio_files(music_root))
         packs[npacks++][0] = 0;
     int first = npacks;
@@ -78,12 +85,14 @@ void pack_dir(const char *name, char *out, size_t n) {
         snprintf(out, n, "%s", music_root);
 }
 
-/* Leaves in music_pack a pack that exists: the requested one, or else the usual one ("arrange"), or else the first. */
+/* Leaves in music_pack a pack that exists: the requested one, or else the usual one ("arrange"), or else the first one
+ * (never the Atari ST entry). */
 void pack_resolve(const char *want) {
     int i = pack_find(want);
-    if (i < 0)
+    if (i < 0 || !strcmp(packs[i], ATARI_PACK))
         i = pack_find("arrange");
-    if (i < 0)
-        i = npacks > 0 ? 0 : -1;
+    for (int k = 0; i < 0 && k < npacks; k++) /* the first real pack: the Atari ST entry is not a folder to play from */
+        if (strcmp(packs[k], ATARI_PACK))
+            i = k;
     snprintf(music_pack, sizeof music_pack, "%s", i >= 0 ? packs[i] : want);
 }

@@ -601,3 +601,13 @@ int png_write(const char *path, const uint8_t *px, int w, int h, int channels /*
 int png_write_indexed(const char *path, const uint8_t *idx, int w, int h, const uint8_t *plte768) {
     return png_write_ct(path, idx, w, h, 1, 3, plte768);
 }
+
+/* ---- for modpack.c ---- */
+/* Inflates a raw deflate stream into out[outn] (the exact size is known). Returns 1 if it worked. */
+int png_inflate(const uint8_t *in, size_t n, uint8_t *out, size_t outn) {
+    return inflate_raw(in, n, out, outn);
+}
+/* CRC-32 (the zlib / PNG one) of some bytes. */
+uint32_t png_crc32(const uint8_t *p, size_t n) {
+    return crc32_update(0, p, n);
+}

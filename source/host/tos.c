@@ -1130,37 +1130,9 @@ static void fade_filter(void) {
     o[4] = (uint8_t)((o[4] & 0x8F) | ((f8 & 3) << 4));
 }
 
-/* ---- one VBL period ---- */
-/* One VBL period of the machine: the VBL interrupt, the timer B firings (palette zones), timer C (music) and timer A
- * (4-bit samples) in their proper instants, and the keyboard interrupts. */
-void tos_vbl(void) {
-    tos.vbl++;
-    /* TOS system variables: only while the TOS still has control (default VBL vector); afterwards that low RAM belongs
-     * to the game */
-    if (mr32(0x70) == STUB_VEC(28)) {
-        mw32(0x466, mr32(0x466) + 1);
-        mw32(0x462, mr32(0x462) + 1);
-        mw32(0x4BA, mr32(0x4BA) + 4);
-    }
-    g_cpu.skip_idle = 1;
-    tos.nzones = 0;
-    if (mr32(0x70) != STUB_VEC(28)) {
-        tos_run_isr(28, 4);
-        add_zone(0);
-        /* timer B (event count): every firing changes the palette from there downwards */
-        int line = 0;
-        for (int k = 0; k < 3; k++) {
-            if ((io[0x7A1B] & 0x0F) != 8 || !tos_mfp_enabled(0x7A07, 0x7A13, 0))
-                break;
-            if (mr32(0x120) == STUB_VEC(72))
-                break;
-            line += io[0x7A21] ? io[0x7A21] : 256;
-            io[0x7A1B] = 0;
-            if (!tos_run_isr(72, 6))
-                break;
-            add_zone(line);
-        }
-    }
+/* Timer C (the game programs it at ~48.6 Hz for the music) and timer A (4-bit samples) of one VBL period, each firing
+ * at its instant. The timers go on whether or not the game's own code runs. */
+static void run_timers(void) {
     /* timer C: the game programs it through registers (at ~48.6 Hz for the music); unprogrammed it is the TOS's (200
      * Hz) */
     int pre = MFP_PRESCALE[(io[0x7A1D] >> 4) & 7], tcd = io[0x7A23] ? io[0x7A23] : 256;
@@ -1197,6 +1169,46 @@ void tos_vbl(void) {
         if (!idle)
             run_isr_batch(h, n < 400 ? n : 400, NULL);
     }
+}
+
+/* Only the timer interrupts of one VBL period, for the game paused with the options menu open: the music of the chip
+ * (the driver's timer C interrupt) goes on, while the game's code, its VBL and its inputs stand still. */
+void tos_music_tick(void) {
+    run_timers();
+}
+
+/* ---- one VBL period ---- */
+/* One VBL period of the machine: the VBL interrupt, the timer B firings (palette zones), timer C (music) and timer A
+ * (4-bit samples) in their proper instants, and the keyboard interrupts. */
+void tos_vbl(void) {
+    tos.vbl++;
+    /* TOS system variables: only while the TOS still has control (default VBL vector); afterwards that low RAM belongs
+     * to the game */
+    if (mr32(0x70) == STUB_VEC(28)) {
+        mw32(0x466, mr32(0x466) + 1);
+        mw32(0x462, mr32(0x462) + 1);
+        mw32(0x4BA, mr32(0x4BA) + 4);
+    }
+    g_cpu.skip_idle = 1;
+    tos.nzones = 0;
+    if (mr32(0x70) != STUB_VEC(28)) {
+        tos_run_isr(28, 4);
+        add_zone(0);
+        /* timer B (event count): every firing changes the palette from there downwards */
+        int line = 0;
+        for (int k = 0; k < 3; k++) {
+            if ((io[0x7A1B] & 0x0F) != 8 || !tos_mfp_enabled(0x7A07, 0x7A13, 0))
+                break;
+            if (mr32(0x120) == STUB_VEC(72))
+                break;
+            line += io[0x7A21] ? io[0x7A21] : 256;
+            io[0x7A1B] = 0;
+            if (!tos_run_isr(72, 6))
+                break;
+            add_zone(line);
+        }
+    }
+    run_timers();
     if (!loader_text_director())
         fade_filter();
     tos_deliver_keys();

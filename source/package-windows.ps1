@@ -10,7 +10,6 @@ $required = @(
     (Join-Path $buildDir 'default.json'),
     (Join-Path $buildDir 'LICENSE'),
     (Join-Path $buildDir 'data'),
-    (Join-Path $buildDir 'assets\mod'),
     (Join-Path $buildDir 'music'),
     (Join-Path $buildDir 'shaders'),
     (Join-Path $sourceDir 'original\README.txt'),
@@ -23,25 +22,20 @@ foreach ($path in $required) {
     }
 }
 
-$withDow = Join-Path $buildDir 'original\DOW'
-if (-not (Test-Path -LiteralPath $withDow -PathType Leaf)) {
-    throw "Required game data file is missing: $withDow"
-}
-
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $stage = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $stage | Out-Null
 
-function New-WindowsPackage([string]$name, [bool]$includeDow) {
+function New-WindowsPackage([string]$name) {
     $appDir = Join-Path $stage $name
     New-Item -ItemType Directory $appDir | Out-Null
 
     foreach ($file in @('dowport.exe', 'default.json', 'LICENSE')) {
         Copy-Item -LiteralPath (Join-Path $buildDir $file) -Destination $appDir
     }
-    foreach ($directory in @('data', 'assets\mod', 'music', 'shaders')) {
+    foreach ($directory in @('data', 'music', 'shaders')) {
         $source = Join-Path $buildDir $directory
         $destination = Join-Path $appDir $directory
         New-Item -ItemType Directory -Force (Split-Path -Parent $destination) | Out-Null
@@ -51,9 +45,6 @@ function New-WindowsPackage([string]$name, [bool]$includeDow) {
     Copy-Item -LiteralPath (Join-Path $projectDir 'CHANGELOG.md') -Destination $appDir
     New-Item -ItemType Directory (Join-Path $appDir 'original') | Out-Null
 
-    if ($includeDow) {
-        Copy-Item -LiteralPath $withDow -Destination (Join-Path $appDir 'original\DOW')
-    }
     Copy-Item -LiteralPath (Join-Path $sourceDir 'original\README.txt') -Destination (Join-Path $appDir 'original\README.txt')
 
     $zipPath = Join-Path $outDir "$name.zip"
@@ -80,8 +71,7 @@ function New-WindowsPackage([string]$name, [bool]$includeDow) {
 }
 
 try {
-    New-WindowsPackage 'DogsOfWar-Windows-x64-with-DOW' $true
-    New-WindowsPackage 'DogsOfWar-Windows-x64-without-DOW' $false
+    New-WindowsPackage 'DogsOfWar-Windows-x64'
 } finally {
     Remove-Item -LiteralPath $stage -Recurse -Force
 }

@@ -14,6 +14,7 @@
  * The file is ordered like the menu: the Game, Sound, Video, Motion, Controls and System tabs, and at the end the
  * code that builds the menu from all of them (menu_build).
  */
+#include "amiga_music.h"
 #include "app.h"
 #ifndef _WIN32
 #include <sys/stat.h>
@@ -167,15 +168,19 @@ static void s_pan(int v) {
     fx_pan = v;
     emu_post(EV_PAN, v, 0);
 }
-static int g_mp3(void) {
-    return mp3_on;
+static int g_splash(void) {
+    return show_startup;
+}
+static void s_splash(int v) {
+    show_startup = v;
 }
 static void s_mp3(int v) {
     mp3_on = v;
     emu_post(EV_MP3, v, 0);
 }
 
-/* Music pack: the list is the subfolders of music/ found by musicpacks.c. */
+/* Music: one list that goes through the Atari ST's own (chip) music, the Amiga disk's music, the loose files of music/
+ * and its subfolders (musicpacks.c). The Atari ST entry is "MP3 music off"; the rest turn it on and choose the pack. */
 static int mpk_nch(void) {
     return pack_count();
 }
@@ -189,6 +194,10 @@ static const char *mpk_txt(int i) {
     }
     if (!pack_name(i)[0])
         snprintf(t[k], sizeof t[k], "%s", tr("val.musicfolder"));
+    else if (!strcmp(pack_name(i), ATARI_PACK))
+        snprintf(t[k], sizeof t[k], "%s", tr("val.music_atari"));
+    else if (!strcmp(pack_name(i), AMIGA_PACK))
+        snprintf(t[k], sizeof t[k], "%s", tr("val.music_amiga"));
     else {
         snprintf(t[k], sizeof t[k], "%s", pack_name(i));
         if (t[k][0] >= 'a' && t[k][0] <= 'z') /* shown capitalised */
@@ -197,16 +206,21 @@ static const char *mpk_txt(int i) {
     return t[k];
 }
 static int mpk_get(void) {
-    int i = pack_find(music_pack);
+    int i = mp3_on ? pack_find(music_pack) : pack_find(ATARI_PACK);
     return i < 0 ? 0 : i;
 }
 static void mpk_set(int i) {
     if (i < 0 || i >= pack_count())
         return;
-    snprintf(music_pack, sizeof music_pack, "%s", pack_name(i));
-    char d[800];
-    pack_dir(music_pack, d, sizeof d);
-    emu_set_music_dir(d);
+    if (!strcmp(pack_name(i), ATARI_PACK))
+        s_mp3(0); /* the original chip music: the last pack stays chosen for next time */
+    else {
+        s_mp3(1);
+        snprintf(music_pack, sizeof music_pack, "%s", pack_name(i));
+        char d[800];
+        pack_dir(music_pack, d, sizeof d);
+        emu_set_music_dir(d);
+    }
     char t[200];
     trf(t, sizeof t, "msg.music_pack", mpk_txt(i));
     menu_status(menu_cur, t);
@@ -539,6 +553,7 @@ static void act_restore(void) {
     s_vx2(cfg_num("volume_samples", 1.0));
     s_vx3(cfg_num("volume_chip_fx", 1.0));
     s_mp3(cfg_bool("mp3_music", 1));
+    s_splash(cfg_bool("startup_screen", 1));
     s_mch(cfg_bool("multichannel_sfx", 0));
     s_pan(cfg_bool("stereo_pan", 0));
     s_fs(cfg_bool("fullscreen", 1));
@@ -719,7 +734,6 @@ void menu_build(int have_audio, int have_gl, int have_pack) {
         add_slider("  menu.fx_ym2149f", "menu.fx_ym2149f.hint", 0.0, 1.0, 0.1, NULL, g_vx3, s_vx3);
         add_bool("menu.multichannel_fx", "menu.multichannel_fx.hint", g_mch, s_mch);
         add_bool("menu.fx_stereo_panning", "menu.fx_stereo_panning.hint", g_pan, s_pan);
-        add_bool("menu.mp3_music", "menu.mp3_music.hint", g_mp3, s_mp3);
         add_choice("menu.music_pack", "menu.music_pack.hint", mpk_nch, mpk_txt, mpk_get, mpk_set);
     }
     add_tab("tab.video", "tab.video.hint");
@@ -773,24 +787,25 @@ void menu_build(int have_audio, int have_gl, int have_pack) {
     add_image("@padmap");
     add_tab("tab.system", "tab.system.hint");
     add_choice("menu.language", "menu.language.hint", lg_nch, lg_txt, lg_get, lg_set);
+    add_bool("menu.startup_screen", "menu.startup_screen.hint", g_splash, s_splash);
     add_action("menu.restore_default_options", "menu.restore_default_options.hint", act_restore);
+    add_sep("", 0);
+    add_action("menu.continue", "menu.continue.hint", act_close);
+    add_action("menu.quit", "menu.quit.hint", act_quit);
     add_sep("sep.build_info", 0);
 #ifdef _WIN32
     add_sep("system.build.target.windows", 1);
 #else
     add_sep("system.build.target.linux", 1);
 #endif
-    add_sep("system.build.shared", 1);
+#ifdef _WIN32
     add_sep("system.build.windows.video", 1);
     add_sep("system.build.windows.input_audio", 1);
+#else
     add_sep("system.build.linux.io", 1);
     add_sep("system.build.linux.runtime", 1);
-    add_sep("system.build.libraries", 1);
-    add_sep("sep.credits", 0);
-    add_sep("Claude Sonnet 5.5 & VooD", 1);
-    add_sep("", 0);
-    add_action("menu.continue", "menu.continue.hint", act_close);
-    add_action("menu.quit", "menu.quit.hint", act_quit);
+#endif
+    add_sep("system.credits_line", 1);
     build_controls_menu();
     menu_cur = menu_options;
 }

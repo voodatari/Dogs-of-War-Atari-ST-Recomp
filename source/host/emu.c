@@ -3,6 +3,7 @@
  * machine snapshots (map and shop, saved games) and the game fixes hooked into the code (horizontal scroll, sound).
  */
 #include "emu.h"
+#include "amiga_music.h"
 #include "lang.h"
 #include "port.h"
 #ifdef _WIN32
@@ -96,7 +97,20 @@ static Looper looper;
 static YM *ym;
 /* a button pressed while a song that ends by itself plays fades it out (see audio_chunk) */
 static int skip_prev_fire = 0, skip_key = 0, skip_fade = 0, skip_total = 0;
+extern char original_dir_path[800]; /* app.c: where the player's own game files are */
+/* The music of the player's own Amiga disk (music pack AMIGA_PACK): instead of an MP3 file the song is made on the fly
+ * by the Amiga game's sound driver (amiga/amiga_music.c). am_on: that pack is chosen and the engine is ready;
+ * am_restart: the song heard has changed and the engine must be told. */
+static int am_on = 0, am_restart = 0;
+/* How long the song heard has been playing (audio frames since pb_reset, counted while the game runs): the Atari ST's
+ * own music keeps going silently under any other music, so this is where the others join in when the Music item
+ * rotates. mp3_sync: an MP3 pack was just chosen, its looper must jump to that position. */
+static int64_t pb_elapsed = 0;
+static int mp3_sync = 0;
+static const int16_t am_marker[2]; /* stands for "the PCM of the song": there is none, the engine renders it */
 static void pb_reset(int s) {
+    am_restart = 1;
+    pb_elapsed = 0;
     pb_song = s;
     pend_song = -2;
     pb_done = 0;
@@ -104,10 +118,49 @@ static void pb_reset(int s) {
     vf_on = 0;
     skip_fade = skip_total = 0;
 }
+/* the song heard can be played now (its MP3 is decoded, or the Amiga engine makes it) */
+static int song_ready(void) {
+    return am_on ? pb_song >= 0 : music_get(music, pb_song, NULL) != NULL;
+}
+/* the PCM of the song heard (NULL: none), or the marker when the Amiga engine plays it */
+static const int16_t *song_pcm(int *mfr) {
+    if (!mp3_on)
+        return NULL;
+    if (am_on) {
+        *mfr = 0;
+        return pb_song >= 0 ? am_marker : NULL;
+    }
+    return music_get(music, pb_song, mfr);
+}
+/* tells the Amiga engine about a change of song (a new pack, a new song, silence) */
+static void am_sync(void) {
+    if (am_on && am_restart) {
+        am_restart = 0;
+        amiga_music_play(pb_song);
+        if (pb_song >= 0 && music_loops(pb_song) && pb_elapsed > 0) /* join the song where the Atari ST's one is */
+            amiga_music_skip((int)(pb_elapsed < 0x7FFFFFFF ? pb_elapsed : 0x7FFFFFFF));
+    }
+}
+/* the pack at that folder is the Amiga disk: opens the engine from the player's file (once) */
+static void am_select(const char *dir) {
+    const char *base = strrchr(dir, '/');
+    base = base ? base + 1 : dir;
+    am_on = 0;
+    if (!strcmp(base, AMIGA_PACK)) {
+        char path[1024];
+        if (amiga_music_ready() ||
+            (amiga_music_find(original_dir_path, path, sizeof path) && amiga_music_open(path, AUDIO_FS)))
+            am_on = 1;
+        else
+            host_log("Amiga music: no usable disk file found in %s", original_dir_path);
+    } else if (amiga_music_ready())
+        amiga_music_play(-1);
+    am_restart = 1;
+}
 /* an mp3 of the ones that end by themselves is playing (or loading) */
 static int pb_once(void) {
     return mp3_on && audio_on && pb_song >= 0 && !music_loops(pb_song) && !pb_done &&
-           (music_get(music, pb_song, NULL) != NULL || music_pending(music, pb_song));
+           (song_ready() || music_pending(music, pb_song));
 }
 /* the mission failed screen waits while the mp3 of its song plays (see game_00A000.c) */
 int hold_fail_screen(void) {
@@ -115,7 +168,7 @@ int hold_fail_screen(void) {
 }
 static int pb_fixed(void) {
     return mp3_on && audio_on && pb_song >= 0 && !music_loops(pb_song) &&
-           (music_get(music, pb_song, NULL) != NULL || music_pending(music, pb_song));
+           (song_ready() || music_pending(music, pb_song));
 }
 static int have_frame = 0;
 static uint32_t last_frame_vbl = 0;
@@ -395,6 +448,11 @@ static void install_hooks(void) {
 /* the MP3 of the song that is heard, mixed into mix (n stereo frames); press = a new fire or key press */
 static void mix_mp3(float *mix, int n, const int16_t *arr, int mfr, int press) {
     static int16_t loop[8192 * 2];
+    if (mp3_sync) { /* a pack was just chosen: join the song where the Atari ST's one is */
+        mp3_sync = 0;
+        if (!am_on && mfr > 0 && music_loops(pb_song))
+            looper.pos = (int)(pb_elapsed % mfr);
+    }
     /* song that ends by itself: one pass, at full volume (the driver's fade-out is the chip version's) */
     if (!music_loops(pb_song)) {
         if (!pb_done) {
@@ -403,7 +461,8 @@ static void mix_mp3(float *mix, int n, const int16_t *arr, int mfr, int press) {
                 if (getenv("DOW_SONGLOG"))
                     host_log_file("song %d skipped with a button (vbl %u)", pb_song, tos.vbl);
             }
-            if (looper_take_once(&looper, arr, mfr, n, loop)) {
+            if (am_on ? (amiga_music_render(n, loop), !amiga_music_playing())
+                      : looper_take_once(&looper, arr, mfr, n, loop)) {
                 pb_done = 1;
                 if (getenv("DOW_SONGLOG"))
                     host_log_file("mp3 of song %d finished (vbl %u, pending %d)", pb_song, tos.vbl, pend_song);
@@ -430,7 +489,9 @@ static void mix_mp3(float *mix, int n, const int16_t *arr, int mfr, int press) {
         float gain = (float)(1.0 / 32768.0) * (g ? (g / 13.0f < 1.0f ? g / 13.0f : 1.0f) : 1.0f);
         {
             int ls, lb;
-            if (music_loop_points(music, pb_song, &ls, &lb))
+            if (am_on)
+                amiga_music_render(n, loop);
+            else if (music_loop_points(music, pb_song, &ls, &lb))
                 looper_take_lp(&looper, arr, mfr, ls, lb, n, loop);
             else
                 looper_take(&looper, arr, mfr, n, loop);
@@ -441,16 +502,11 @@ static void mix_mp3(float *mix, int n, const int16_t *arr, int mfr, int press) {
     }
 }
 
-/* With the menu open the game is paused but the MP3 music goes on (the chip music needs the game to run, so it is
- * silent). */
+/* With the menu open the game is paused but all the music goes on: the MP3 / Amiga music is just mixed, and the chip
+ * music runs on the game's own timer C interrupt (the game's code, its VBL and its inputs stand still), at the
+ * real-time rate of one VBL per step. */
 static double paused_audio_next = 0;
-/* A pause that has no music to play (chip music, effects only) must not cut the sound off with a step and leave the
- * device with an empty buffer (that was heard as a click and counted as a "gap"): the last frame sent fades out in 10
- * ms and silence goes on being sent at the real-time rate; after the pause the first 5 ms of audio fade in. */
-#define PAUSE_FADE_OUT 441
-#define PAUSE_FADE_IN  220
-static int16_t last_audio_frame[2];
-static int pause_fade_left = 0, fade_in_left = 0, silent_pause = 0;
+static void audio_chunk(void);
 static void audio_paused(void) {
     if (!audio_on || !cfg.audio) {
         paused_audio_next = 0;
@@ -459,37 +515,10 @@ static void audio_paused(void) {
     double now = now_s();
     if (paused_audio_next < now - 0.1)
         paused_audio_next = now;
-    int mfr = 0;
-    const int16_t *arr = mp3_on ? music_get(music, pb_song, &mfr) : NULL;
     while (paused_audio_next <= now) {
-        static float mix[8192 * 2];
-        static int16_t pcm[8192 * 2];
-        int n = (int)(AUDIO_FS * 0.02);
-        if (n > 8000)
-            n = 8000;
-        memset(mix, 0, sizeof(float) * (size_t)n * 2);
-        if (arr) {
-            mix_mp3(mix, n, arr, mfr, 0);
-            if (pb_done && pend_song != -2) {
-                int nx = pend_song;
-                pb_reset(nx);
-                break;
-            }
-            for (int i = 0; i < n * 2; i++) {
-                float v = mix[i] * (float)vol;
-                v = v < -1.0f ? -1.0f : v > 1.0f ? 1.0f : v;
-                pcm[i] = (int16_t)(v * 32767.0f);
-            }
-        } else { /* nothing to play: fade out the last frame sent, then silence */
-            silent_pause = 1;
-            for (int i = 0; i < n; i++) {
-                float g = pause_fade_left > 0 ? (float)pause_fade_left-- / PAUSE_FADE_OUT : 0.0f;
-                pcm[2 * i] = (int16_t)(last_audio_frame[0] * g);
-                pcm[2 * i + 1] = (int16_t)(last_audio_frame[1] * g);
-            }
-        }
-        audio_push(cfg.audio, pcm, n);
-        paused_audio_next += 0.02;
+        tos_music_tick();
+        audio_chunk();
+        paused_audio_next += 1.0 / tos.vbl_rate;
     }
 }
 
@@ -508,11 +537,13 @@ static void audio_chunk(void) {
         return;
     }
     /* new fire or key press */
-    int fire_now = ((wanted_joy[0] | wanted_joy[1]) & 0x80) != 0, press = (fire_now && !skip_prev_fire) || skip_key;
+    int fire_now = ((wanted_joy[0] | wanted_joy[1]) & 0x80) != 0,
+        press = !paused && ((fire_now && !skip_prev_fire) || skip_key);
     skip_prev_fire = fire_now;
     skip_key = 0;
     int mfr = 0;
-    const int16_t *arr = mp3_on ? music_get(music, pb_song, &mfr) : NULL;
+    am_sync();
+    const int16_t *arr = song_pcm(&mfr);
     int want_mute = arr != NULL || (mp3_on && music_pending(music, pb_song));
     if (want_mute != mp3_active) {
         mp3_active = want_mute;
@@ -524,6 +555,7 @@ static void audio_chunk(void) {
     int n = ym_samples_for(ym, 1.0 / tos.vbl_rate);
     if (n > 8000)
         n = 8000;
+    pb_elapsed += n;
     int mixer = sfx_multi || sfx_pan;
     if (mixer) {
         int k = 0;
@@ -575,14 +607,19 @@ static void audio_chunk(void) {
         v = v < -1.0f ? -1.0f : v > 1.0f ? 1.0f : v;
         pcm[i] = (int16_t)(v * 32767.0f);
     }
-    for (int i = 0; i < n && fade_in_left > 0; i++, fade_in_left--) { /* coming back from a silent pause */
-        float g = 1.0f - (float)fade_in_left / PAUSE_FADE_IN;
-        pcm[2 * i] = (int16_t)(pcm[2 * i] * g);
-        pcm[2 * i + 1] = (int16_t)(pcm[2 * i + 1] * g);
-    }
-    if (n > 0) {
-        last_audio_frame[0] = pcm[2 * (n - 1)];
-        last_audio_frame[1] = pcm[2 * (n - 1) + 1];
+    { /* development only: DOW_AUDIODUMP=file writes everything sent to the audio device as raw 16-bit stereo */
+        static FILE *dump_file;
+        static int dump_tried;
+        if (!dump_tried) {
+            dump_tried = 1;
+            const char *dump_path = getenv("DOW_AUDIODUMP");
+            if (dump_path)
+                dump_file = fopen(dump_path, "wb");
+        }
+        if (dump_file && n > 0) {
+            fwrite(pcm, 4, (size_t)n, dump_file);
+            fflush(dump_file);
+        }
     }
     if (cfg.audio)
         audio_push(cfg.audio, pcm, n);
@@ -1052,16 +1089,10 @@ static int handle_event(const Ev *e) {
         }
         case EV_PAUSE:
             if (e->a) {
-                if (!paused) {
-                    pause_fade_left = PAUSE_FADE_OUT;
-                    silent_pause = 0;
-                }
                 paused = 1;
             } else {
                 if (paused)
                     set_rate(clock_rate, -(tvf() + lead - (double)tos.vbl));
-                if (paused && silent_pause)
-                    fade_in_left = PAUSE_FADE_IN;
                 paused = 0;
             }
             break;
@@ -1075,12 +1106,17 @@ static int handle_event(const Ev *e) {
             break;
         case EV_MP3:
             mp3_on = (int)e->a;
-            if (mp3_on)
+            if (mp3_on) {
                 music_prefetch(music);
+                mp3_sync = 1;
+                am_restart = 1;
+            }
             break;
         case EV_MUSICDIR:
             music_set_dir(music, music_req);
+            am_select(music_req);
             looper.pos = 0;
+            mp3_sync = 1;
             if (mp3_on)
                 music_prefetch(music);
             break;
@@ -1675,6 +1711,7 @@ int emu_start(const EmuConfig *c) {
     tos_load_state(st);
     state_free(st);
     music = music_new(c->music_dir);
+    am_select(c->music_dir);
     ym = ym_new(AUDIO_FS);
     {
         uint8_t r[16];

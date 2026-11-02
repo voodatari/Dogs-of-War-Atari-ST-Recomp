@@ -123,11 +123,14 @@ void wait_two_vbl(void)
 | `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, 4-bit sample mixer (multichannel + stereo pan), music decoding with the vendored open-source decoders in `../thirdparty/` (MP3 via minimp3, OGG via stb_vorbis, WAV via a built-in reader; music packs), Windows waveOut/WASAPI or Linux SDL2 audio |
 | `lang.c` | language files (`data/languages/*.xml`) and `tr(id)`, used by every text of the menus |
 | `video.c`, `../port/video_sdl.c`, `menu.c`, `input.c`, `cfg.c` | Windows OpenGL or Linux SDL2 software window, options menu drawn with the portable `../port/ui2d.c` library, keyboard/gamepad with redefinable keys and buttons and twin-stick aiming, `options.json` |
+| `../amiga/amiga_music.c`, `amiga_disk.c`, `dwam_*.c` | the music of the player's own Amiga disk: `amiga_disk.c` finds the sound driver in an `.adf` or a WHDLoad `.lha` (with a small LH5 decoder, recognised by CRC32); `dwam_*.c` is that driver translated from the 68000 to C (generated like the Atari code, with a private `cpu.h` and an Amiga memory of its own); `amiga_music.c` emulates the four Paula voices and steps the driver at the CIA rate |
 | `padmap.c`, `padmap_backend.h`, `padmap_ui2d.c` | the picture of the pad in the Controls tab: portable core (layout and texts) + drawing backend (ui2d at 3x, so it draws the same on any OS; another system writes its own `padmap_<backend>.c`) |
 | `gfxpack.c`, `dump.c`, `png.c` | graphics packs, the graphics dump (`assets/original`), PNG reader/writer |
+| `modpack.c`, `modpack_data.c` | the example pack `assets/mod`, made from the dump + the pixel differences kept in the program (generated data by `tools/make_modpack.py`, Python with Pillow, run by hand) |
 | `ico.png` | Windows executable/window icon; the Windows build turns it into a multi-size `.ico` resource |
 | `emu.c` | emulation thread (50 VBL/s clock, saves, weapon helpers, audio of every VBL, hooks into the game code) |
 | `main.c` | start-up, the window loop (one image per monitor refresh) and shutdown |
+| `startup.c` | the screens before the game, drawn in its window with `ui2d`: the loading screen (files found, progress bar, two seconds or a fire button) and the one that explains that the game data is missing and waits for it |
 | `app.h`, `app.c` | the state shared by the window-thread code (objects, display, options, folders) and the loading / saving of `options.json` |
 | `game_input.c`, `fastinput.c` | keyboard, gamepads and menu navigation of every frame; the optional thread that reads the inputs 1000 times per second |
 | `menu_ui.c`, `menu_options.c`, `musicpacks.c` | opening / closing the menu and redefining controls; what the menu contains and what each option does; the music packs found in `music/` |
@@ -272,11 +275,14 @@ void wait_two_vbl(void)
 | `ym.c`, `mixer.c`, `mp3.c`, `audioout.c` | YM2149, mezclador de muestras de 4 bits (multicanal + panorámica estéreo), decodificación de música con los decodificadores abiertos de `../thirdparty/` (MP3 vía minimp3, OGG vía stb_vorbis, WAV con un lector propio; bancos de música), waveOut/WASAPI en Windows o audio SDL2 en Linux |
 | `lang.c` | ficheros de idioma (`data/languages/*.xml`) y `tr(id)`, usados por todos los textos de los menús |
 | `video.c`, `../port/video_sdl.c`, `menu.c`, `input.c`, `cfg.c` | ventana OpenGL en Windows o SDL2 por software en Linux, menú de opciones con `../port/ui2d.c`, teclado/mandos con teclas y botones redefinibles y apuntado con doble stick, `options.json` |
+| `../amiga/amiga_music.c`, `amiga_disk.c`, `dwam_*.c` | la música del disco Amiga del propio jugador: `amiga_disk.c` encuentra el controlador de sonido en un `.adf` o en un `.lha` de WHDLoad (con un pequeño decodificador LH5, reconocido por CRC32); `dwam_*.c` es ese controlador traducido del 68000 a C (generado como el código del Atari, con un `cpu.h` privado y una memoria Amiga propia); `amiga_music.c` emula las cuatro voces de Paula y avanza el controlador al ritmo de la CIA |
 | `padmap.c`, `padmap_backend.h`, `padmap_ui2d.c` | la imagen del mando de la pestaña Controles: núcleo portable (disposición y textos) + backend de dibujo (ui2d a 3x, así que se dibuja igual en cualquier sistema; otro sistema escribe su propio `padmap_<backend>.c`) |
 | `gfxpack.c`, `dump.c`, `png.c` | packs gráficos, el volcado de gráficos (`assets/original`), lector/escritor de PNG |
+| `modpack.c`, `modpack_data.c` | el pack de ejemplo `assets/mod`, hecho a partir del volcado y de las diferencias de píxeles que lleva el programa (datos generados con `tools/make_modpack.py`, Python con Pillow, a mano) |
 | `ico.png` | icono del ejecutable y de la ventana en Windows; el script de Windows lo convierte en un recurso `.ico` |
 | `emu.c` | hilo de emulación (reloj de 50 VBL/s, guardados, ayudas de armas, audio de cada VBL, ganchos en el código del juego) |
 | `main.c` | arranque, el bucle de la ventana (una imagen por refresco del monitor) y el cierre |
+| `startup.c` | las pantallas previas al juego, dibujadas en su ventana con `ui2d`: la de carga (ficheros encontrados, barra de progreso, dos segundos o un botón de disparo) y la que explica que faltan los datos del juego y los espera |
 | `app.h`, `app.c` | el estado compartido por el código del hilo de la ventana (objetos, pantalla, opciones, carpetas) y la carga / el guardado de `options.json` |
 | `game_input.c`, `fastinput.c` | teclado, mandos y navegación del menú en cada fotograma; el hilo opcional que lee las entradas 1000 veces por segundo |
 | `menu_ui.c`, `menu_options.c`, `musicpacks.c` | abrir / cerrar el menú y redefinir controles; qué contiene el menú y qué hace cada opción; los packs de música que hay en `music/` |

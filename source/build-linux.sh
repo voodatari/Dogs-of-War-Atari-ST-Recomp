@@ -21,7 +21,7 @@ fi
 
 mkdir -p "$obj"
 mapfile -d '' sources < <(
-    find "$root/generated" "$root/runtime" "$root/host" "$root/port" -type f -name '*.c' -print0
+    find "$root/generated" "$root/runtime" "$root/host" "$root/port" "$root/amiga" -type f -name '*.c' -print0
 )
 sources+=("$root/thirdparty/stb_vorbis.c")
 
