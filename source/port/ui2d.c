@@ -22,8 +22,8 @@
 #include "ui2d_fonts.h"
 
 /* 5 subscanlines per pixel row; the coverage weight of one fully covered sample */
-#define SUBS 5
-#define SUBW (COVMAX / SUBS) /* a fully covered column adds this per subscanline, COVMAX in all */
+#define SUBS   5
+#define SUBW   (COVMAX / SUBS) /* a fully covered column adds this per subscanline, COVMAX in all */
 #define COVMAX (255 * SUBS)
 
 static double dmin(double a, double b) {
@@ -40,7 +40,7 @@ static int clampi(int v, int a, int b) {
 struct Ui2d {
     uint8_t *px; /* W*H*4 straight RGBA */
     int w, h;
-    uint16_t *cov; /* per-column coverage of the row being built (0..COVMAX) */
+    uint16_t *cov;                /* per-column coverage of the row being built (0..COVMAX) */
     float *ccr, *ccg, *ccb, *ccw; /* gradient colour accumulators of the row being built */
 };
 
@@ -161,8 +161,10 @@ static void row_add(Row *r, double x0, double x1, double ys) {
             double t = r->gy1 > r->gy0 ? (ys - r->gy0) / (r->gy1 - r->gy0) : 0.0;
             t = t < 0 ? 0.0 : t > 1 ? 1.0 : t;
             u->ccr[c] += (float)(w * ((r->gtop & 255) + (int)((r->gbot & 255) - (r->gtop & 255)) * t));
-            u->ccg[c] += (float)(w * (((r->gtop >> 8) & 255) + (int)(((r->gbot >> 8) & 255) - ((r->gtop >> 8) & 255)) * t));
-            u->ccb[c] += (float)(w * (((r->gtop >> 16) & 255) + (int)(((r->gbot >> 16) & 255) - ((r->gtop >> 16) & 255)) * t));
+            u->ccg[c] +=
+                (float)(w * (((r->gtop >> 8) & 255) + (int)(((r->gbot >> 8) & 255) - ((r->gtop >> 8) & 255)) * t));
+            u->ccb[c] +=
+                (float)(w * (((r->gtop >> 16) & 255) + (int)(((r->gbot >> 16) & 255) - ((r->gtop >> 16) & 255)) * t));
             u->ccw[c] += (float)w;
         }
     }
@@ -602,14 +604,14 @@ void ui2d_polyline(Ui2d *u, const double *xy, int n, long stroke, double sw) {
 
 /* ---- fonts ---- */
 #define G_HASH 1024
-#define F_MAX 48
+#define F_MAX  48
 
 typedef struct Gl {
     struct Gl *next;
     unsigned cp;
-    int w, h;       /* bitmap size */
-    int bx, by;     /* box: left / top relative to the pen origin (by is negative above the baseline) */
-    uint8_t *bm;    /* coverage, w*h */
+    int w, h;    /* bitmap size */
+    int bx, by;  /* box: left / top relative to the pen origin (by is negative above the baseline) */
+    uint8_t *bm; /* coverage, w*h */
 } Gl;
 
 typedef struct Face {
@@ -683,9 +685,9 @@ static Ui2dFont font_make(double px, int bold, int gdi) {
         /* what CreateFontA(-px, ..., "Segoe UI") gave the Windows build: em = px. Noto Sans is wider than Segoe UI in
          * lower case, so it matches the text width at about 0.935 of that em (measured against GetTextExtentPoint32 on
          * several menu strings and sizes, and on screenshots of both builds); the bold face is only used for the
-         * title, all in capitals, where Noto Bold is narrower than Segoe UI Bold, hence its 1.0. The cell is Segoe's own
-         * (tmHeight 1.33 px, baseline 1.075 px down, as measured at the sizes the menu uses) so the line spacing the menu
-         * layout was tuned with stays */
+         * title, all in capitals, where Noto Bold is narrower than Segoe UI Bold, hence its 1.0. The cell is Segoe's
+         * own (tmHeight 1.33 px, baseline 1.075 px down, as measured at the sizes the menu uses) so the line spacing
+         * the menu layout was tuned with stays */
         f->scale = (float)stbtt_ScaleForMappingEmToPixels(&f->info, px * (bold ? 1.0 : 0.935));
         f->height = (int)lround(px * 1.33);
         f->asc = (float)lround(px * 1.075);

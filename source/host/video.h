@@ -41,6 +41,10 @@ void video_draw(void);                                 /* draws and presents (wi
 void video_size(int *w, int *h);
 void video_set_fullscreen(int on);
 int video_is_fullscreen(void);
+/* Linux only (video_sdl.c): after presenting each frame, wait until the GPU has finished it (glFinish), so the driver
+ * cannot queue frames ahead and add delay between a key press and the picture */
+void video_set_glfinish(int on);
+int video_get_glfinish(void);
 void video_title(const char *t);
 /* PNG of what is in the window (call before video_draw's swap: it is read from the back buffer) */
 int video_screenshot(const char *path);

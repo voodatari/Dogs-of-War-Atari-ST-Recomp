@@ -614,8 +614,7 @@ int pads_read(PadRead out[2]) {
             st |= J_LEFT;
         if ((dpad & SDL_DPAD_RIGHT) || lx > dead_zone)
             st |= J_RIGHT;
-        if ((pad_bind[PBA_FIRE] && (raw & pad_bind[PBA_FIRE])) ||
-            (pad_bind[PBA_FIRE2] && (raw & pad_bind[PBA_FIRE2])))
+        if ((pad_bind[PBA_FIRE] && (raw & pad_bind[PBA_FIRE])) || (pad_bind[PBA_FIRE2] && (raw & pad_bind[PBA_FIRE2])))
             st |= J_FIRE;
         if ((st & J_UP) && (st & J_DOWN))
             st &= ~(J_UP | J_DOWN);

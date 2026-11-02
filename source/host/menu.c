@@ -588,7 +588,8 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
         if (it->kind == MK_IMAGE) {
             {
                 char lp[560];
-                blit_image(u, localized_path(it->path ? it->path : "", lp, sizeof lp), px + 20, y, pw - 40, by0 - 12 - y);
+                blit_image(u, localized_path(it->path ? it->path : "", lp, sizeof lp), px + 20, y, pw - 40,
+                           by0 - 12 - y);
                 break;
             }
         }
@@ -619,10 +620,7 @@ uint8_t *menu_draw(Menu *m, int W, int H) {
                 snprintf(t, sizeof t, "<  %s  >", vt);
             else
                 snprintf(t, sizeof t, "%s", vt);
-            text_at(u, f, px + pw - 30 - text_w(f, t), y, t,
-                    off   ? 0x696c7d
-                    : sel ? 0xffe678
-                          : 0xdcc878);
+            text_at(u, f, px + pw - 30 - text_w(f, t), y, t, off ? 0x696c7d : sel ? 0xffe678 : 0xdcc878);
         }
         y += lh;
     }

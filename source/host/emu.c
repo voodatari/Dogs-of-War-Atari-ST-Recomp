@@ -1733,6 +1733,16 @@ int emu_start(const EmuConfig *c) {
 }
 /* Waits for the emulation thread to finish (up to 3 s). */
 void emu_join(void) {
+    /* the thread clears emu_running as its last act: if it does not within 3 s it is left alone (and its event queue
+     * is not freed under it) so the program can still exit */
+    double t0 = now_s();
+    while (thread_handle && emu_running && now_s() - t0 < 3.0)
+        sleep_ms(2);
+    if (thread_handle && emu_running) {
+        host_log("The emulation thread did not stop within 3 s; leaving it behind");
+        thread_handle = NULL;
+        return;
+    }
     if (thread_handle) {
         port_thread_join(thread_handle);
         thread_handle = NULL;

@@ -69,7 +69,7 @@ static void slot_labels(void) {
                 trf(slot_lbl[n - 1], 64, "val.slot.empty", n);
         }
 #else
-            trf(slot_lbl[n - 1], 64, "val.slot.empty", n);
+        trf(slot_lbl[n - 1], 64, "val.slot.empty", n);
 #endif
     }
 }
@@ -431,6 +431,15 @@ static void s_fastin(int v) {
     fast_input = v;
     resend_input = 1;
 }
+#ifndef _WIN32
+/* Linux only: wait for the GPU after each frame (see video_set_glfinish) */
+static int g_gpuwait(void) {
+    return video_get_glfinish();
+}
+static void s_gpuwait(int v) {
+    video_set_glfinish(v);
+}
+#endif
 static int g_llaud(void) {
     return low_latency_audio;
 }
@@ -552,6 +561,9 @@ static void act_restore(void) {
     match_refresh = cfg_bool("game_speed_match", 0);
     s_interp(cfg_bool("frame_interpolation", 1));
     s_fastin(cfg_bool("fast_input", 0));
+#ifndef _WIN32
+    s_gpuwait(cfg_bool("gpu_wait", 0));
+#endif
     s_llaud(cfg_bool("low_latency_audio", 0));
     s_atrim(cfg_num("audio_sync_trim_ms", 0.0));
     apply_video_cfg();
@@ -745,6 +757,9 @@ void menu_build(int have_audio, int have_gl, int have_pack) {
     menu_last_valhint(menu_cur, gs_hint);
     add_sep("sep.latency", 0);
     add_bool("menu.fast_input_polling", "menu.fast_input_polling.hint", g_fastin, s_fastin);
+#ifndef _WIN32
+    add_bool("menu.gpu_wait", "menu.gpu_wait.hint", g_gpuwait, s_gpuwait);
+#endif
     if (have_audio) {
         add_bool("menu.low_latency_audio", "menu.low_latency_audio.hint", g_llaud, s_llaud);
         add_slider("  menu.audio_sync_trim_ms", "menu.audio_sync_trim_ms.hint", -100.0, 100.0, 5.0, "%.0f", g_atrim,

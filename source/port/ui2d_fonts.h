@@ -5,5 +5,5 @@
 extern const unsigned char ui2d_ttf_regular[];
 extern const unsigned char ui2d_ttf_bold[];
 #define UI2D_TTF_REGULAR_SIZE 621572
-#define UI2D_TTF_BOLD_SIZE 631484
+#define UI2D_TTF_BOLD_SIZE    631484
 #endif

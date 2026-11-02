@@ -316,8 +316,7 @@ void port_list_entries(const char *dir, int type, const char *suffix, PortFileFn
         return;
     struct dirent *entry;
     while ((entry = readdir(d)) != NULL) {
-        if (entry->d_name[0] == '.' && (!entry->d_name[1] ||
-                                        (entry->d_name[1] == '.' && !entry->d_name[2])))
+        if (entry->d_name[0] == '.' && (!entry->d_name[1] || (entry->d_name[1] == '.' && !entry->d_name[2])))
             continue;
         if (!suffix_equal(entry->d_name, suffix))
             continue;

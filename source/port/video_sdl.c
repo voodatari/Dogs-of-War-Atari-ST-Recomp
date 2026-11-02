@@ -22,15 +22,15 @@ static char video_error[256];
 static GLuint gl_game_texture, gl_overlay_texture, gl_vao, gl_vbo;
 static GLuint gl_builtin[3], gl_overlay_program, gl_external_program;
 static int gl_texture_w, gl_texture_h, gl_frame;
+static int gl_finish_after_swap; /* the "Wait for the GPU" option: glFinish after every swap */
 static char shaders_dir_path[500], ext_names[64][64], ext_paths[64][800], ext_program_name[64];
 static int n_ext;
 static float ext_params[64];
 static char ext_param_names[64][48];
 static int n_ext_params;
 
-static const char *gl_vertex_source =
-    "#version 330\nin vec2 in_pos; in vec2 in_uv; out vec2 uv;\n"
-    "void main() { gl_Position = vec4(in_pos, 0.0, 1.0); uv = in_uv; }\n";
+static const char *gl_vertex_source = "#version 330\nin vec2 in_pos; in vec2 in_uv; out vec2 uv;\n"
+                                      "void main() { gl_Position = vec4(in_pos, 0.0, 1.0); uv = in_uv; }\n";
 static const char *gl_common_source =
     "#version 330\n"
     "uniform sampler2D tex; uniform vec2 srcSize; uniform vec2 texSize; uniform vec2 outSize;\n"
@@ -63,10 +63,9 @@ static const char *gl_frag_crt =
     " vec3 ib=floor(b0/3.0)+clamp(b0-3.0*floor(b0/3.0)-ch,0.0,1.0);"
     " vec3 mk=mix(vec3(0.35),vec3(1.0),(ib-ia)*mkz); vec3 m=mix(vec3(1.0),mk*1.35,p_mask);"
     " c=c*sl*m*p_bright; vec2 v=q*2.0-1.0; c*=1.0-p_vig*dot(v,v)*0.35; fragColor=vec4(c,1); }\n";
-static const char *gl_overlay_fragment =
-    "#version 330\nuniform sampler2D tex; in vec2 uv; out vec4 fragColor;"
-    "void main(){fragColor=texture(tex,uv);}\n";
-static const float gl_quad[16] = {-1,-1,0,1, 1,-1,1,1, -1,1,0,0, 1,1,1,0};
+static const char *gl_overlay_fragment = "#version 330\nuniform sampler2D tex; in vec2 uv; out vec4 fragColor;"
+                                         "void main(){fragColor=texture(tex,uv);}\n";
+static const float gl_quad[16] = {-1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0};
 
 static void gl_set_error(const char *prefix) {
     snprintf(video_error, sizeof video_error, "%s: %s", prefix, SDL_GetError());
@@ -297,8 +296,7 @@ static int gl_open(int w, int h, int src_w, int src_h, const char *dir) {
         window = NULL;
         return 0;
     }
-    host_log("OpenGL %s: %s", (const char *)glGetString(GL_VERSION),
-             (const char *)glGetString(GL_RENDERER));
+    host_log("OpenGL %s: %s", (const char *)glGetString(GL_VERSION), (const char *)glGetString(GL_RENDERER));
     game_w = src_w;
     game_h = src_h;
     snprintf(shaders_dir_path, sizeof shaders_dir_path, "%s", dir ? dir : "");
@@ -340,75 +338,144 @@ static int vk_from_scancode(SDL_Scancode sc) {
     if (sc >= SDL_SCANCODE_KP_1 && sc <= SDL_SCANCODE_KP_9)
         return VK_NUMPAD1 + sc - SDL_SCANCODE_KP_1;
     switch (sc) {
-        case SDL_SCANCODE_KP_0: return VK_NUMPAD0;
-        case SDL_SCANCODE_UP: return VK_UP;
-        case SDL_SCANCODE_DOWN: return VK_DOWN;
-        case SDL_SCANCODE_LEFT: return VK_LEFT;
-        case SDL_SCANCODE_RIGHT: return VK_RIGHT;
-        case SDL_SCANCODE_LCTRL: return VK_LCONTROL;
-        case SDL_SCANCODE_RCTRL: return VK_RCONTROL;
-        case SDL_SCANCODE_LSHIFT: return VK_LSHIFT;
-        case SDL_SCANCODE_RSHIFT: return VK_RSHIFT;
-        case SDL_SCANCODE_LALT: return VK_LMENU;
-        case SDL_SCANCODE_RALT: return VK_RMENU;
-        case SDL_SCANCODE_SPACE: return VK_SPACE;
-        case SDL_SCANCODE_RETURN: return VK_RETURN;
-        case SDL_SCANCODE_KP_ENTER: return 0x10D;
-        case SDL_SCANCODE_ESCAPE: return VK_ESCAPE;
-        case SDL_SCANCODE_BACKSPACE: return VK_BACK;
-        case SDL_SCANCODE_TAB: return VK_TAB;
-        case SDL_SCANCODE_DELETE: return VK_DELETE;
-        case SDL_SCANCODE_INSERT: return VK_INSERT;
-        case SDL_SCANCODE_HOME: return VK_HOME;
-        case SDL_SCANCODE_END: return VK_END;
-        case SDL_SCANCODE_PAGEUP: return VK_PRIOR;
-        case SDL_SCANCODE_PAGEDOWN: return VK_NEXT;
-        case SDL_SCANCODE_F1: return VK_F1;
-        case SDL_SCANCODE_F2: return VK_F2;
-        case SDL_SCANCODE_F3: return VK_F3;
-        case SDL_SCANCODE_F4: return VK_F4;
-        case SDL_SCANCODE_F5: return VK_F5;
-        case SDL_SCANCODE_F6: return VK_F6;
-        case SDL_SCANCODE_F7: return VK_F7;
-        case SDL_SCANCODE_F8: return VK_F8;
-        case SDL_SCANCODE_F9: return VK_F9;
-        case SDL_SCANCODE_F10: return VK_F10;
-        case SDL_SCANCODE_F11: return VK_F11;
-        case SDL_SCANCODE_F12: return VK_F12;
-        case SDL_SCANCODE_F13: return VK_F13;
-        case SDL_SCANCODE_F14: return VK_F14;
-        case SDL_SCANCODE_F15: return VK_F15;
-        case SDL_SCANCODE_F16: return VK_F16;
-        case SDL_SCANCODE_F17: return VK_F17;
-        case SDL_SCANCODE_F18: return VK_F18;
-        case SDL_SCANCODE_F19: return VK_F19;
-        case SDL_SCANCODE_F20: return VK_F20;
-        case SDL_SCANCODE_F21: return VK_F21;
-        case SDL_SCANCODE_F22: return VK_F22;
-        case SDL_SCANCODE_F23: return VK_F23;
-        case SDL_SCANCODE_F24: return VK_F24;
-        case SDL_SCANCODE_MINUS: return 0xBD;
-        case SDL_SCANCODE_EQUALS: return 0xBB;
-        case SDL_SCANCODE_LEFTBRACKET: return 0xDB;
-        case SDL_SCANCODE_RIGHTBRACKET: return 0xDD;
-        case SDL_SCANCODE_BACKSLASH: return 0xDC;
-        case SDL_SCANCODE_SEMICOLON: return 0xBA;
-        case SDL_SCANCODE_APOSTROPHE: return 0xDE;
-        case SDL_SCANCODE_GRAVE: return 0xC0;
-        case SDL_SCANCODE_COMMA: return 0xBC;
-        case SDL_SCANCODE_PERIOD: return 0xBE;
-        case SDL_SCANCODE_SLASH: return 0xBF;
-        case SDL_SCANCODE_KP_PLUS: return VK_ADD;
-        case SDL_SCANCODE_KP_MINUS: return VK_SUBTRACT;
-        case SDL_SCANCODE_KP_MULTIPLY: return VK_MULTIPLY;
-        case SDL_SCANCODE_KP_DIVIDE: return VK_DIVIDE;
-        case SDL_SCANCODE_KP_PERIOD: return VK_DECIMAL;
-        case SDL_SCANCODE_CAPSLOCK: return VK_CAPITAL;
-        case SDL_SCANCODE_NUMLOCKCLEAR: return VK_NUMLOCK;
-        case SDL_SCANCODE_SCROLLLOCK: return VK_SCROLL;
-        case SDL_SCANCODE_PAUSE: return VK_PAUSE;
-        case SDL_SCANCODE_PRINTSCREEN: return VK_SNAPSHOT;
-        case SDL_SCANCODE_APPLICATION: return VK_APPS;
+        case SDL_SCANCODE_KP_0:
+            return VK_NUMPAD0;
+        case SDL_SCANCODE_UP:
+            return VK_UP;
+        case SDL_SCANCODE_DOWN:
+            return VK_DOWN;
+        case SDL_SCANCODE_LEFT:
+            return VK_LEFT;
+        case SDL_SCANCODE_RIGHT:
+            return VK_RIGHT;
+        case SDL_SCANCODE_LCTRL:
+            return VK_LCONTROL;
+        case SDL_SCANCODE_RCTRL:
+            return VK_RCONTROL;
+        case SDL_SCANCODE_LSHIFT:
+            return VK_LSHIFT;
+        case SDL_SCANCODE_RSHIFT:
+            return VK_RSHIFT;
+        case SDL_SCANCODE_LALT:
+            return VK_LMENU;
+        case SDL_SCANCODE_RALT:
+            return VK_RMENU;
+        case SDL_SCANCODE_SPACE:
+            return VK_SPACE;
+        case SDL_SCANCODE_RETURN:
+            return VK_RETURN;
+        case SDL_SCANCODE_KP_ENTER:
+            return 0x10D;
+        case SDL_SCANCODE_ESCAPE:
+            return VK_ESCAPE;
+        case SDL_SCANCODE_BACKSPACE:
+            return VK_BACK;
+        case SDL_SCANCODE_TAB:
+            return VK_TAB;
+        case SDL_SCANCODE_DELETE:
+            return VK_DELETE;
+        case SDL_SCANCODE_INSERT:
+            return VK_INSERT;
+        case SDL_SCANCODE_HOME:
+            return VK_HOME;
+        case SDL_SCANCODE_END:
+            return VK_END;
+        case SDL_SCANCODE_PAGEUP:
+            return VK_PRIOR;
+        case SDL_SCANCODE_PAGEDOWN:
+            return VK_NEXT;
+        case SDL_SCANCODE_F1:
+            return VK_F1;
+        case SDL_SCANCODE_F2:
+            return VK_F2;
+        case SDL_SCANCODE_F3:
+            return VK_F3;
+        case SDL_SCANCODE_F4:
+            return VK_F4;
+        case SDL_SCANCODE_F5:
+            return VK_F5;
+        case SDL_SCANCODE_F6:
+            return VK_F6;
+        case SDL_SCANCODE_F7:
+            return VK_F7;
+        case SDL_SCANCODE_F8:
+            return VK_F8;
+        case SDL_SCANCODE_F9:
+            return VK_F9;
+        case SDL_SCANCODE_F10:
+            return VK_F10;
+        case SDL_SCANCODE_F11:
+            return VK_F11;
+        case SDL_SCANCODE_F12:
+            return VK_F12;
+        case SDL_SCANCODE_F13:
+            return VK_F13;
+        case SDL_SCANCODE_F14:
+            return VK_F14;
+        case SDL_SCANCODE_F15:
+            return VK_F15;
+        case SDL_SCANCODE_F16:
+            return VK_F16;
+        case SDL_SCANCODE_F17:
+            return VK_F17;
+        case SDL_SCANCODE_F18:
+            return VK_F18;
+        case SDL_SCANCODE_F19:
+            return VK_F19;
+        case SDL_SCANCODE_F20:
+            return VK_F20;
+        case SDL_SCANCODE_F21:
+            return VK_F21;
+        case SDL_SCANCODE_F22:
+            return VK_F22;
+        case SDL_SCANCODE_F23:
+            return VK_F23;
+        case SDL_SCANCODE_F24:
+            return VK_F24;
+        case SDL_SCANCODE_MINUS:
+            return 0xBD;
+        case SDL_SCANCODE_EQUALS:
+            return 0xBB;
+        case SDL_SCANCODE_LEFTBRACKET:
+            return 0xDB;
+        case SDL_SCANCODE_RIGHTBRACKET:
+            return 0xDD;
+        case SDL_SCANCODE_BACKSLASH:
+            return 0xDC;
+        case SDL_SCANCODE_SEMICOLON:
+            return 0xBA;
+        case SDL_SCANCODE_APOSTROPHE:
+            return 0xDE;
+        case SDL_SCANCODE_GRAVE:
+            return 0xC0;
+        case SDL_SCANCODE_COMMA:
+            return 0xBC;
+        case SDL_SCANCODE_PERIOD:
+            return 0xBE;
+        case SDL_SCANCODE_SLASH:
+            return 0xBF;
+        case SDL_SCANCODE_KP_PLUS:
+            return VK_ADD;
+        case SDL_SCANCODE_KP_MINUS:
+            return VK_SUBTRACT;
+        case SDL_SCANCODE_KP_MULTIPLY:
+            return VK_MULTIPLY;
+        case SDL_SCANCODE_KP_DIVIDE:
+            return VK_DIVIDE;
+        case SDL_SCANCODE_KP_PERIOD:
+            return VK_DECIMAL;
+        case SDL_SCANCODE_CAPSLOCK:
+            return VK_CAPITAL;
+        case SDL_SCANCODE_NUMLOCKCLEAR:
+            return VK_NUMLOCK;
+        case SDL_SCANCODE_SCROLLLOCK:
+            return VK_SCROLL;
+        case SDL_SCANCODE_PAUSE:
+            return VK_PAUSE;
+        case SDL_SCANCODE_PRINTSCREEN:
+            return VK_SNAPSHOT;
+        case SDL_SCANCODE_APPLICATION:
+            return VK_APPS;
         default:
             return 0;
     }
@@ -426,15 +493,23 @@ static SDL_Scancode scancode_from_vk(int vk) {
     if (vk >= VK_NUMPAD1 && vk <= VK_NUMPAD9)
         return (SDL_Scancode)(SDL_SCANCODE_KP_1 + vk - VK_NUMPAD1);
     switch (vk) {
-        case VK_UP: return SDL_SCANCODE_UP;
-        case VK_DOWN: return SDL_SCANCODE_DOWN;
-        case VK_LEFT: return SDL_SCANCODE_LEFT;
-        case VK_RIGHT: return SDL_SCANCODE_RIGHT;
+        case VK_UP:
+            return SDL_SCANCODE_UP;
+        case VK_DOWN:
+            return SDL_SCANCODE_DOWN;
+        case VK_LEFT:
+            return SDL_SCANCODE_LEFT;
+        case VK_RIGHT:
+            return SDL_SCANCODE_RIGHT;
         case VK_CONTROL:
-        case VK_LCONTROL: return SDL_SCANCODE_LCTRL;
-        case VK_RCONTROL: return SDL_SCANCODE_RCTRL;
-        case VK_SPACE: return SDL_SCANCODE_SPACE;
-        default: return SDL_SCANCODE_UNKNOWN;
+        case VK_LCONTROL:
+            return SDL_SCANCODE_LCTRL;
+        case VK_RCONTROL:
+            return SDL_SCANCODE_RCTRL;
+        case VK_SPACE:
+            return SDL_SCANCODE_SPACE;
+        default:
+            return SDL_SCANCODE_UNKNOWN;
     }
 }
 
@@ -543,8 +618,12 @@ void video_use_external(const char *name) {
     ext_program_name[0] = 0;
 }
 
-int video_external_count(void) { return n_ext; }
-const char *video_external_name(int i) { return i >= 0 && i < n_ext ? ext_names[i] : ""; }
+int video_external_count(void) {
+    return n_ext;
+}
+const char *video_external_name(int i) {
+    return i >= 0 && i < n_ext ? ext_names[i] : "";
+}
 
 void video_upload(const uint8_t *rgb) {
     if ((!renderer && !gl_context) || !rgb || game_w <= 0 || game_h <= 0)
@@ -568,8 +647,9 @@ void video_upload(const uint8_t *rgb) {
                     for (int x = 0; x < 320; x++) {
                         uint8_t *d = small + ((size_t)y * 320 + x) * 3;
                         if (vcfg.src_mode == 2) {
-                            const uint8_t *s = rgb + (((size_t)y * scale + scale / 2) * (size_t)game_w +
-                                                      (size_t)x * scale + scale / 2) * 3;
+                            const uint8_t *s =
+                                rgb +
+                                (((size_t)y * scale + scale / 2) * (size_t)game_w + (size_t)x * scale + scale / 2) * 3;
                             memcpy(d, s, 3);
                         } else {
                             unsigned sum[3] = {0, 0, 0};
@@ -787,8 +867,8 @@ static void gl_draw_frame(void) {
             glPixelStorei(GL_PACK_ALIGNMENT, 1);
             glReadPixels(0, 0, window_w, window_h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
             for (int row = 0; row < window_h; row++)
-                memcpy(flipped + (size_t)row * window_w * 3,
-                       pixels + (size_t)(window_h - 1 - row) * window_w * 3, (size_t)window_w * 3);
+                memcpy(flipped + (size_t)row * window_w * 3, pixels + (size_t)(window_h - 1 - row) * window_w * 3,
+                       (size_t)window_w * 3);
             if (!png_write(screenshot_path, flipped, window_w, window_h, 3))
                 host_log("Screenshot could not be written: %s", screenshot_path);
         } else {
@@ -799,6 +879,16 @@ static void gl_draw_frame(void) {
         screenshot_path[0] = 0;
     }
     SDL_GL_SwapWindow(window);
+    if (gl_finish_after_swap)
+        glFinish();
+}
+
+void video_set_glfinish(int on) {
+    gl_finish_after_swap = on != 0;
+}
+
+int video_get_glfinish(void) {
+    return gl_finish_after_swap;
 }
 
 void video_draw(void) {
@@ -852,8 +942,13 @@ void video_set_fullscreen(int on) {
     fullscreen = on;
 }
 
-int video_is_fullscreen(void) { return fullscreen; }
-void video_title(const char *title) { if (window) SDL_SetWindowTitle(window, title); }
+int video_is_fullscreen(void) {
+    return fullscreen;
+}
+void video_title(const char *title) {
+    if (window)
+        SDL_SetWindowTitle(window, title);
+}
 
 int video_screenshot(const char *path) {
     snprintf(screenshot_path, sizeof screenshot_path, "%s", path);
@@ -875,7 +970,9 @@ int video_refresh_hz(void) {
     return window && SDL_GetCurrentDisplayMode(display, &mode) == 0 && mode.refresh_rate > 0 ? mode.refresh_rate : 60;
 }
 
-void *video_hwnd(void) { return window; }
+void *video_hwnd(void) {
+    return window;
+}
 
 int video_has_focus(void) {
     return window && (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) != 0;
@@ -899,8 +996,7 @@ int video_poll(VEvent *out) {
             return 1;
         }
         if (event.type == SDL_WINDOWEVENT) {
-            if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
-                event.window.event == SDL_WINDOWEVENT_RESIZED) {
+            if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 window_w = event.window.data1;
                 window_h = event.window.data2;
                 out->type = VE_RESIZE;

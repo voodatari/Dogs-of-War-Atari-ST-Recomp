@@ -1,0 +1,23 @@
+# Style of the program (source/host and source/port). Run: clang-format -i *.c *.h  (not ui2d_fonts.c: embedded data)
+BasedOnStyle: LLVM
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 120
+UseTab: Never
+BreakBeforeBraces: Attach
+IndentCaseLabels: true
+PointerAlignment: Right
+SortIncludes: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+SpacesBeforeTrailingComments: 2
+AlignTrailingComments: true
+ReflowComments: true
+AlignConsecutiveMacros: Consecutive
+AlignAfterOpenBracket: Align
+BinPackArguments: true
+BinPackParameters: true
+MaxEmptyLinesToKeep: 1

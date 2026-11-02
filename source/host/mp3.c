@@ -114,8 +114,7 @@ static int16_t *resample_to_fs(const int16_t *src, int fr, int ch, int hz, int *
             double t2 = t * t, t3 = t2 * t;
             double m1 = (a2 - a0) * 0.5, m2 = (a3 - a1) * 0.5;
             /* Hermite: h00 a1 + h10 m1 + h01 a2 + h11 m2 */
-            double v =
-                (2 * t3 - 3 * t2 + 1) * a1 + (t3 - 2 * t2 + t) * m1 + (-2 * t3 + 3 * t2) * a2 + (t3 - t2) * m2;
+            double v = (2 * t3 - 3 * t2 + 1) * a1 + (t3 - 2 * t2 + t) * m1 + (-2 * t3 + 3 * t2) * a2 + (t3 - t2) * m2;
             if (v > 32767)
                 v = 32767;
             if (v < -32768)
@@ -208,7 +207,7 @@ static int decode_ogg(const uint8_t *file, size_t n, Decoded *d) {
     d->hz = hz;
     d->ch = ch > 0 ? ch : 1;
     return 1;
-}/* reads a PCM WAV (8/16/24 bits or 32-bit float), interleaved */
+} /* reads a PCM WAV (8/16/24 bits or 32-bit float), interleaved */
 static int decode_wav(const uint8_t *f, size_t n, Decoded *d) {
     if (n < 12 || memcmp(f, "RIFF", 4) || memcmp(f + 8, "WAVE", 4))
         return 0;
@@ -218,8 +217,8 @@ static int decode_wav(const uint8_t *f, size_t n, Decoded *d) {
     size_t dlen = 0;
     while (p + 8 <= n) {
         const uint8_t *id = f + p;
-        uint32_t len = (uint32_t)f[p + 4] | ((uint32_t)f[p + 5] << 8) | ((uint32_t)f[p + 6] << 16) |
-                       ((uint32_t)f[p + 7] << 24);
+        uint32_t len =
+            (uint32_t)f[p + 4] | ((uint32_t)f[p + 5] << 8) | ((uint32_t)f[p + 6] << 16) | ((uint32_t)f[p + 7] << 24);
         const uint8_t *body = f + p + 8;
         size_t room = n - (p + 8);
         if (len > room)

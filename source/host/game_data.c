@@ -2,11 +2,11 @@
 #include "host.h"
 #include "port.h"
 
-#define DOW_CRC32 0x6703B50Fu
-#define REPLICANTS_CRC32 0xF6E84D7Au
-#define DOW_LOGICAL_SIZE 819200u
-#define DOW_BOOT_OFFSET 0x5141Cu
-#define DOW_BOOT_SIZE 60000u
+#define DOW_CRC32              0x6703B50Fu
+#define REPLICANTS_CRC32       0xF6E84D7Au
+#define DOW_LOGICAL_SIZE       819200u
+#define DOW_BOOT_OFFSET        0x5141Cu
+#define DOW_BOOT_SIZE          60000u
 #define REPLICANTS_MAPPED_SIZE 486912u
 
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
 
 /* Unmapped bytes are zero-filled; this map covers the boot block and every byte used by the current asset dump. */
 static const DataExtent replicants_extents[] = {
-    {0x000400u, 0x0003FEu, 3584u}, {0x001200u, 0x001200u, 512u}, {0x001400u, 0x002800u, 5120u},
+    {0x000400u, 0x0003FEu, 3584u}, {0x001200u, 0x001200u, 512u},  {0x001400u, 0x002800u, 5120u},
     {0x002800u, 0x005000u, 5120u}, {0x003C00u, 0x007800u, 5120u}, {0x005000u, 0x00A000u, 5120u},
     {0x006400u, 0x00C800u, 5120u}, {0x007800u, 0x00F000u, 5120u}, {0x008C00u, 0x011800u, 5120u},
     {0x00A000u, 0x014000u, 5120u}, {0x00B400u, 0x016800u, 5120u}, {0x00C800u, 0x019000u, 5120u},
@@ -45,7 +45,7 @@ static const DataExtent replicants_extents[] = {
     {0x058C00u, 0x0B1800u, 5120u}, {0x05A000u, 0x0B4000u, 5120u}, {0x05B400u, 0x0B6800u, 5120u},
     {0x05C800u, 0x0B9000u, 5120u}, {0x05DC00u, 0x0BB800u, 5120u}, {0x05F000u, 0x0BE000u, 5120u},
     {0x060400u, 0x0003FEu, 3584u}, {0x061200u, 0x0003FEu, 3584u}, {0x062000u, 0x0003FEu, 3072u},
-    {0x062C00u, 0x001400u, 2560u}, {0x063600u, 0x0003FEu, 512u}, {0x063800u, 0x001400u, 1536u},
+    {0x062C00u, 0x001400u, 2560u}, {0x063600u, 0x0003FEu, 512u},  {0x063800u, 0x001400u, 1536u},
     {0x065400u, 0x003C00u, 5120u}, {0x066800u, 0x006400u, 5120u}, {0x067C00u, 0x008C00u, 5120u},
     {0x069000u, 0x00B400u, 5120u}, {0x06A400u, 0x00DC00u, 5120u}, {0x06B800u, 0x010400u, 5120u},
     {0x06CC00u, 0x012C00u, 5120u}, {0x06E000u, 0x015400u, 5120u}, {0x06F400u, 0x017C00u, 5120u},
@@ -139,7 +139,8 @@ int game_data_init(const char *original_dir) {
 
     snprintf(source_error, sizeof source_error,
              "No supported game data found. Expected original/DOW or a Replicants .st image "
-             "(CRC32 %08X) in original/.", REPLICANTS_CRC32);
+             "(CRC32 %08X) in original/.",
+             REPLICANTS_CRC32);
     return 0;
 }
 

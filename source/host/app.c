@@ -142,6 +142,9 @@ void load_options(int fix_cli, int no_sound) {
             lead_with_interp = 6;
     }
     fast_input = cfg_bool("fast_input", 0);
+#ifndef _WIN32
+    video_set_glfinish(cfg_bool("gpu_wait", 0));
+#endif
     low_latency_audio = cfg_bool("low_latency_audio", 0);
     audio_trim_ms = cfg_num("audio_sync_trim_ms", 0.0);
     if (getenv("DOW_FASTIN"))
@@ -225,6 +228,9 @@ void save_options(void) {
     cfg_set_bool("enemy_script_fix", script_fix);
     cfg_set_num("latency", lead_with_interp);
     cfg_set_bool("fast_input", fast_input);
+#ifndef _WIN32
+    cfg_set_bool("gpu_wait", video_get_glfinish());
+#endif
     cfg_set_bool("low_latency_audio", low_latency_audio);
     cfg_set_num("audio_sync_trim_ms", audio_trim_ms);
     cfg_set_bool("extrapolate", pflags.extrap);
