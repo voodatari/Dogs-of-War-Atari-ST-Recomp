@@ -14,8 +14,6 @@ A native Windows and Linux port of **Dogs of War** (Atari ST, Elite 1989, Pera P
 Atari STE machine and is drawn at your monitor's refresh rate: the game logic runs at 25 Hz and the port **interpolates between its frames**, so movement is smooth at 60 Hz
 (or 144 Hz…) with very low input latency. It is a single self-contained C program.
 
-**What it is.** The game's own 68000 program has been **translated entirely to C**, and it is compiled with a small Atari STE machine (mini-TOS, timers, keyboard and joystick, video, YM2149 sound chip) and a native Windows or Linux host into one executable. The original game logic runs unchanged at its own 25 Hz; the port draws the images in between.
-
 **What it is not.** It is not an emulator of the Atari ST: no 68000 instruction is interpreted, and no Atari ROM or TOS is needed.
 
 **Downloads:** [Windows x64 ZIP](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Windows-x64.zip) · [Linux x64 AppImage](https://github.com/voodatari/Dogs-of-War-Atari-ST-Recomp/releases/download/v1.3.0/Dogs-of-War-Atari-ST-Recomp-for-Linux-x64.appimage).
